@@ -1,0 +1,22 @@
+# macos
+*.DS_Store
+
+# intellij project files
+**/*.idea
+!**/*.idea/google-java-format.xml
+*.iml
+
+# generated
+**/target
+
+# eclipse/vscode
+**/.project
+**/.classpath
+**/classpath-data.json
+**/.settings
+**/.factorypath
+
+# logfiles
+**/*.log
+**/*.log.*
+**/import
