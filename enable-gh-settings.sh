@@ -4,6 +4,8 @@ set -euo pipefail
 # Enables:
 #  1) Immutable releases
 #  2) Require actions to be pinned to a full-length commit SHA
+#  3) Always suggest updating pull request branches
+#  4) Automatically delete head branches
 #
 # For every repo directory under ROOT_DIR (default: current directory).
 #
@@ -52,6 +54,20 @@ check_sha_pinning_required() {
   local owner_repo="$1"
   local enabled
   enabled="$(gh api "repos/$owner_repo/actions/permissions" --jq '.sha_pinning_required' 2>/dev/null || true)"
+  [[ "$enabled" == "true" ]]
+}
+
+check_allow_update_branch() {
+  local owner_repo="$1"
+  local enabled
+  enabled="$(gh api "repos/$owner_repo" --jq '.allow_update_branch' 2>/dev/null || true)"
+  [[ "$enabled" == "true" ]]
+}
+
+check_delete_branch_on_merge() {
+  local owner_repo="$1"
+  local enabled
+  enabled="$(gh api "repos/$owner_repo" --jq '.delete_branch_on_merge' 2>/dev/null || true)"
   [[ "$enabled" == "true" ]]
 }
 
@@ -147,6 +163,48 @@ for d in "$ROOT_DIR"/*/; do
     note "  - sha_pinning_required check: OK"
   else
     note "  - sha_pinning_required check: NOT ENABLED / NOT ACCESSIBLE"
+  fi
+
+  # --- 3) Always suggest updating pull request branches: enable ---
+  if ! out="$(gh api -X PATCH "repos/$owner_repo" -F allow_update_branch=true 2>&1)"; then
+    failed_ops=$((failed_ops + 1))
+    if grep -qiE 'HTTP 403|HTTP 404|Resource not accessible|Must have admin|requires.*admin|insufficient' <<<"$out"; then
+      no_permission+=("$owner_repo (allow_update_branch)")
+      note "  - allow_update_branch: FAILED (likely no permission)"
+    else
+      other_errors+=("$owner_repo (allow_update_branch): $out")
+      note "  - allow_update_branch: FAILED (unexpected)"
+    fi
+  else
+    note "  - allow_update_branch: enabled request sent"
+  fi
+
+  # --- 3b) Always suggest updating pull request branches: check ---
+  if check_allow_update_branch "$owner_repo"; then
+    note "  - allow_update_branch check: OK"
+  else
+    note "  - allow_update_branch check: NOT ENABLED / NOT ACCESSIBLE"
+  fi
+
+  # --- 4) Automatically delete head branches: enable ---
+  if ! out="$(gh api -X PATCH "repos/$owner_repo" -F delete_branch_on_merge=true 2>&1)"; then
+    failed_ops=$((failed_ops + 1))
+    if grep -qiE 'HTTP 403|HTTP 404|Resource not accessible|Must have admin|requires.*admin|insufficient' <<<"$out"; then
+      no_permission+=("$owner_repo (delete_branch_on_merge)")
+      note "  - delete_branch_on_merge: FAILED (likely no permission)"
+    else
+      other_errors+=("$owner_repo (delete_branch_on_merge): $out")
+      note "  - delete_branch_on_merge: FAILED (unexpected)"
+    fi
+  else
+    note "  - delete_branch_on_merge: enabled request sent"
+  fi
+
+  # --- 4b) Automatically delete head branches: check ---
+  if check_delete_branch_on_merge "$owner_repo"; then
+    note "  - delete_branch_on_merge check: OK"
+  else
+    note "  - delete_branch_on_merge check: NOT ENABLED / NOT ACCESSIBLE"
   fi
 done
 
