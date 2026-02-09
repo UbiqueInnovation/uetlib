@@ -15,11 +15,13 @@ set -euo pipefail
 
 ROOT_DIR="."
 DRY_RUN="false"
+ONLY_REPO=""
 
 usage() {
   cat <<'EOF'
 Usage: enable-gh-settings.sh [-r ROOT_DIR] [-n]
   -r, --root     Root directory to scan (default: current directory)
+  -o, --only     Only process one repo under root (dir name or path)
   -n, --dry-run  Print actions without making changes
 EOF
 }
@@ -33,6 +35,10 @@ while [[ $# -gt 0 ]]; do
     -n|--dry-run)
       DRY_RUN="true"
       shift
+      ;;
+    -o|--only)
+      ONLY_REPO="${2:-}"
+      shift 2
       ;;
     -h|--help)
       usage
@@ -50,6 +56,27 @@ if [[ -z "$ROOT_DIR" ]]; then
   err "Root directory is required."
   usage
   exit 1
+fi
+
+ROOT_DIR="${ROOT_DIR%/}"
+only_dir=""
+if [[ -n "$ONLY_REPO" ]]; then
+  if [[ "$ONLY_REPO" == /* ]]; then
+    only_dir="$ONLY_REPO"
+  elif [[ "$ONLY_REPO" == "." ]]; then
+    only_dir="$ROOT_DIR"
+  else
+    only_dir="$ROOT_DIR/$ONLY_REPO"
+  fi
+  only_dir="${only_dir%/}"
+  if [[ "$only_dir" != "$ROOT_DIR" && "$only_dir" != "$ROOT_DIR/"* ]]; then
+    err "--only must point to a repo directory under root."
+    exit 1
+  fi
+  if [[ ! -d "$only_dir" ]]; then
+    err "Repo directory not found: $only_dir"
+    exit 1
+  fi
 fi
 
 err()  { printf "ERROR: %s\n" "$*" >&2; }
@@ -83,29 +110,53 @@ get_owner_repo() {
 check_immutable_releases() {
   local owner_repo="$1"
   local enabled
-  enabled="$(gh api "repos/$owner_repo/immutable-releases" --jq '.enabled' 2>/dev/null || true)"
-  [[ "$enabled" == "true" ]]
+  enabled="$(gh api "repos/$owner_repo/immutable-releases" --jq '.enabled'  || true)"
+  if [[ "$enabled" == "true" ]]; then
+    return 0
+  elif [[ "$enabled" == "false" ]]; then
+    return 1
+  else
+    return 2
+  fi
 }
 
 check_sha_pinning_required() {
   local owner_repo="$1"
   local enabled
   enabled="$(gh api "repos/$owner_repo/actions/permissions" --jq '.sha_pinning_required' 2>/dev/null || true)"
-  [[ "$enabled" == "true" ]]
+  if [[ "$enabled" == "true" ]]; then
+    return 0
+  elif [[ "$enabled" == "false" ]]; then
+    return 1
+  else
+    return 2
+  fi
 }
 
 check_allow_update_branch() {
   local owner_repo="$1"
   local enabled
   enabled="$(gh api "repos/$owner_repo" --jq '.allow_update_branch' 2>/dev/null || true)"
-  [[ "$enabled" == "true" ]]
+  if [[ "$enabled" == "true" ]]; then
+    return 0
+  elif [[ "$enabled" == "false" ]]; then
+    return 1
+  else
+    return 2
+  fi
 }
 
 check_delete_branch_on_merge() {
   local owner_repo="$1"
   local enabled
   enabled="$(gh api "repos/$owner_repo" --jq '.delete_branch_on_merge' 2>/dev/null || true)"
-  [[ "$enabled" == "true" ]]
+  if [[ "$enabled" == "true" ]]; then
+    return 0
+  elif [[ "$enabled" == "false" ]]; then
+    return 1
+  else
+    return 2
+  fi
 }
 
 # --- preflight ---
@@ -115,6 +166,8 @@ gh auth status >/dev/null 2>&1 || { err "gh not authenticated. Run: gh auth logi
 processed=0
 skipped=0
 failed_ops=0
+skipped_already=0
+skipped_unknown=0
 
 declare -a no_permission=()
 declare -a other_errors=()
@@ -124,12 +177,19 @@ note "Root directory: $ROOT_DIR"
 if [[ "$DRY_RUN" == "true" ]]; then
   note "Dry run: enabled (no changes will be made)"
 fi
+if [[ -n "$only_dir" ]]; then
+  note "Only repo: $only_dir"
+fi
 note "Scanning for repo directories..."
 
 shopt -s nullglob
 for d in "$ROOT_DIR"/*/; do
   repo_dir="${d%/}"
   dir_name="$(basename "$repo_dir")"
+
+  if [[ -n "$only_dir" && "$repo_dir" != "$only_dir" ]]; then
+    continue
+  fi
 
   if [[ ! -d "$repo_dir/.git" ]]; then
     skipped=$((skipped + 1))
@@ -149,28 +209,51 @@ for d in "$ROOT_DIR"/*/; do
   note "==> [$processed] $owner_repo"
 
   # --- 1) Immutable releases: enable ---
-  if [[ "$DRY_RUN" == "true" ]]; then
-    note "  - immutable-releases: DRY RUN (would enable)"
+  immutable_status=2
+  if check_immutable_releases "$owner_repo"; then
+    immutable_status=0
   else
-    if ! out="$(gh api -X PUT "repos/$owner_repo/immutable-releases" 2>&1)"; then
-      failed_ops=$((failed_ops + 1))
-      if grep -qiE 'HTTP 403|HTTP 404|Resource not accessible|Must have admin|requires.*admin|insufficient' <<<"$out"; then
-        no_permission+=("$owner_repo (immutable-releases)")
-        note "  - immutable-releases: FAILED (likely no permission)"
-      else
-        other_errors+=("$owner_repo (immutable-releases): $out")
-        note "  - immutable-releases: FAILED (unexpected)"
-      fi
+    immutable_status=$?
+  fi
+  if [[ "$immutable_status" -eq 0 ]]; then
+    skipped_already=$((skipped_already + 1))
+    note "  - immutable-releases: already enabled (skipping)"
+  elif [[ "$immutable_status" -eq 2 ]]; then
+    skipped_unknown=$((skipped_unknown + 1))
+    note "  - immutable-releases: SKIPPED (cannot read current status)"
+  else
+    if [[ "$DRY_RUN" == "true" ]]; then
+      note "  - immutable-releases: DRY RUN (would enable)"
     else
-      note "  - immutable-releases: enabled request sent"
+      if ! out="$(gh api -X PUT "repos/$owner_repo/immutable-releases" 2>&1)"; then
+        failed_ops=$((failed_ops + 1))
+        if grep -qiE 'HTTP 403|HTTP 404|Resource not accessible|Must have admin|requires.*admin|insufficient' <<<"$out"; then
+          no_permission+=("$owner_repo (immutable-releases)")
+          note "  - immutable-releases: FAILED (likely no permission)"
+        else
+          other_errors+=("$owner_repo (immutable-releases): $out")
+          note "  - immutable-releases: FAILED (unexpected)"
+        fi
+      else
+        note "  - immutable-releases: enabled request sent"
+      fi
     fi
   fi
 
   # --- 1b) Immutable releases: check ---
-  if check_immutable_releases "$owner_repo"; then
-    note "  - immutable-releases check: OK"
-  else
-    note "  - immutable-releases check: NOT ENABLED / NOT ACCESSIBLE"
+  if [[ "$immutable_status" -eq 2 ]]; then
+    note "  - immutable-releases check: NOT ACCESSIBLE"
+  elif [[ "$immutable_status" -ne 0 ]]; then
+    if check_immutable_releases "$owner_repo"; then
+      immutable_status=0
+    else
+      immutable_status=$?
+    fi
+    case "$immutable_status" in
+      0) note "  - immutable-releases check: OK" ;;
+      1) note "  - immutable-releases check: NOT ENABLED" ;;
+      2) note "  - immutable-releases check: NOT ACCESSIBLE" ;;
+    esac
   fi
 
   # --- 2) SHA pinning required: enable ---
@@ -184,83 +267,154 @@ for d in "$ROOT_DIR"/*/; do
     no_permission+=("$owner_repo (actions/permissions read)")
     note "  - sha_pinning_required: SKIPPED (cannot read current actions/permissions; likely no permission)"
   else
-    if [[ "$DRY_RUN" == "true" ]]; then
-      note "  - sha_pinning_required: DRY RUN (would enable)"
+    sha_pinning_status=2
+    if check_sha_pinning_required "$owner_repo"; then
+      sha_pinning_status=0
     else
-      if ! out="$(gh api -X PUT "repos/$owner_repo/actions/permissions" \
-          -F enabled="$current_enabled" \
-          -F allowed_actions="$current_allowed" \
-          -F sha_pinning_required=true \
-          2>&1)"; then
-        failed_ops=$((failed_ops + 1))
-        if grep -qiE 'HTTP 403|HTTP 404|Resource not accessible|Must have admin|requires.*admin|insufficient' <<<"$out"; then
-          no_permission+=("$owner_repo (sha_pinning_required)")
-          note "  - sha_pinning_required: FAILED (likely no permission)"
-        else
-          other_errors+=("$owner_repo (sha_pinning_required): $out")
-          note "  - sha_pinning_required: FAILED (unexpected)"
-        fi
+      sha_pinning_status=$?
+    fi
+    if [[ "$sha_pinning_status" -eq 0 ]]; then
+      skipped_already=$((skipped_already + 1))
+      note "  - sha_pinning_required: already enabled (skipping)"
+    elif [[ "$sha_pinning_status" -eq 2 ]]; then
+      skipped_unknown=$((skipped_unknown + 1))
+      note "  - sha_pinning_required: SKIPPED (cannot read current status)"
+    else
+      if [[ "$DRY_RUN" == "true" ]]; then
+        note "  - sha_pinning_required: DRY RUN (would enable)"
       else
-        note "  - sha_pinning_required: enabled request sent"
+        if ! out="$(gh api -X PUT "repos/$owner_repo/actions/permissions" \
+            -F enabled="$current_enabled" \
+            -F allowed_actions="$current_allowed" \
+            -F sha_pinning_required=true \
+            2>&1)"; then
+          failed_ops=$((failed_ops + 1))
+          if grep -qiE 'HTTP 403|HTTP 404|Resource not accessible|Must have admin|requires.*admin|insufficient' <<<"$out"; then
+            no_permission+=("$owner_repo (sha_pinning_required)")
+            note "  - sha_pinning_required: FAILED (likely no permission)"
+          else
+            other_errors+=("$owner_repo (sha_pinning_required): $out")
+            note "  - sha_pinning_required: FAILED (unexpected)"
+          fi
+        else
+          note "  - sha_pinning_required: enabled request sent"
+        fi
       fi
     fi
   fi
 
   # --- 2b) SHA pinning required: check ---
-  if check_sha_pinning_required "$owner_repo"; then
-    note "  - sha_pinning_required check: OK"
-  else
-    note "  - sha_pinning_required check: NOT ENABLED / NOT ACCESSIBLE"
+  if [[ -n "${sha_pinning_status:-}" ]]; then
+    if [[ "$sha_pinning_status" -eq 2 ]]; then
+      note "  - sha_pinning_required check: NOT ACCESSIBLE"
+    elif [[ "$sha_pinning_status" -ne 0 ]]; then
+      if check_sha_pinning_required "$owner_repo"; then
+        sha_pinning_status=0
+      else
+        sha_pinning_status=$?
+      fi
+      case "$sha_pinning_status" in
+        0) note "  - sha_pinning_required check: OK" ;;
+        1) note "  - sha_pinning_required check: NOT ENABLED" ;;
+        2) note "  - sha_pinning_required check: NOT ACCESSIBLE" ;;
+      esac
+    fi
   fi
 
   # --- 3) Always suggest updating pull request branches: enable ---
-  if [[ "$DRY_RUN" == "true" ]]; then
-    note "  - allow_update_branch: DRY RUN (would enable)"
+  allow_update_status=2
+  if check_allow_update_branch "$owner_repo"; then
+    allow_update_status=0
   else
-    if ! out="$(gh api -X PATCH "repos/$owner_repo" -F allow_update_branch=true 2>&1)"; then
-      failed_ops=$((failed_ops + 1))
-      if grep -qiE 'HTTP 403|HTTP 404|Resource not accessible|Must have admin|requires.*admin|insufficient' <<<"$out"; then
-        no_permission+=("$owner_repo (allow_update_branch)")
-        note "  - allow_update_branch: FAILED (likely no permission)"
-      else
-        other_errors+=("$owner_repo (allow_update_branch): $out")
-        note "  - allow_update_branch: FAILED (unexpected)"
-      fi
+    allow_update_status=$?
+  fi
+  if [[ "$allow_update_status" -eq 0 ]]; then
+    skipped_already=$((skipped_already + 1))
+    note "  - allow_update_branch: already enabled (skipping)"
+  elif [[ "$allow_update_status" -eq 2 ]]; then
+    skipped_unknown=$((skipped_unknown + 1))
+    note "  - allow_update_branch: SKIPPED (cannot read current status)"
+  else
+    if [[ "$DRY_RUN" == "true" ]]; then
+      note "  - allow_update_branch: DRY RUN (would enable)"
     else
-      note "  - allow_update_branch: enabled request sent"
+      if ! out="$(gh api -X PATCH "repos/$owner_repo" -F allow_update_branch=true 2>&1)"; then
+        failed_ops=$((failed_ops + 1))
+        if grep -qiE 'HTTP 403|HTTP 404|Resource not accessible|Must have admin|requires.*admin|insufficient' <<<"$out"; then
+          no_permission+=("$owner_repo (allow_update_branch)")
+          note "  - allow_update_branch: FAILED (likely no permission)"
+        else
+          other_errors+=("$owner_repo (allow_update_branch): $out")
+          note "  - allow_update_branch: FAILED (unexpected)"
+        fi
+      else
+        note "  - allow_update_branch: enabled request sent"
+      fi
     fi
   fi
 
   # --- 3b) Always suggest updating pull request branches: check ---
-  if check_allow_update_branch "$owner_repo"; then
-    note "  - allow_update_branch check: OK"
-  else
-    note "  - allow_update_branch check: NOT ENABLED / NOT ACCESSIBLE"
+  if [[ "$allow_update_status" -eq 2 ]]; then
+    note "  - allow_update_branch check: NOT ACCESSIBLE"
+  elif [[ "$allow_update_status" -ne 0 ]]; then
+    if check_allow_update_branch "$owner_repo"; then
+      allow_update_status=0
+    else
+      allow_update_status=$?
+    fi
+    case "$allow_update_status" in
+      0) note "  - allow_update_branch check: OK" ;;
+      1) note "  - allow_update_branch check: NOT ENABLED" ;;
+      2) note "  - allow_update_branch check: NOT ACCESSIBLE" ;;
+    esac
   fi
 
   # --- 4) Automatically delete head branches: enable ---
-  if [[ "$DRY_RUN" == "true" ]]; then
-    note "  - delete_branch_on_merge: DRY RUN (would enable)"
+  delete_branch_status=2
+  if check_delete_branch_on_merge "$owner_repo"; then
+    delete_branch_status=0
   else
-    if ! out="$(gh api -X PATCH "repos/$owner_repo" -F delete_branch_on_merge=true 2>&1)"; then
-      failed_ops=$((failed_ops + 1))
-      if grep -qiE 'HTTP 403|HTTP 404|Resource not accessible|Must have admin|requires.*admin|insufficient' <<<"$out"; then
-        no_permission+=("$owner_repo (delete_branch_on_merge)")
-        note "  - delete_branch_on_merge: FAILED (likely no permission)"
-      else
-        other_errors+=("$owner_repo (delete_branch_on_merge): $out")
-        note "  - delete_branch_on_merge: FAILED (unexpected)"
-      fi
+    delete_branch_status=$?
+  fi
+  if [[ "$delete_branch_status" -eq 0 ]]; then
+    skipped_already=$((skipped_already + 1))
+    note "  - delete_branch_on_merge: already enabled (skipping)"
+  elif [[ "$delete_branch_status" -eq 2 ]]; then
+    skipped_unknown=$((skipped_unknown + 1))
+    note "  - delete_branch_on_merge: SKIPPED (cannot read current status)"
+  else
+    if [[ "$DRY_RUN" == "true" ]]; then
+      note "  - delete_branch_on_merge: DRY RUN (would enable)"
     else
-      note "  - delete_branch_on_merge: enabled request sent"
+      if ! out="$(gh api -X PATCH "repos/$owner_repo" -F delete_branch_on_merge=true 2>&1)"; then
+        failed_ops=$((failed_ops + 1))
+        if grep -qiE 'HTTP 403|HTTP 404|Resource not accessible|Must have admin|requires.*admin|insufficient' <<<"$out"; then
+          no_permission+=("$owner_repo (delete_branch_on_merge)")
+          note "  - delete_branch_on_merge: FAILED (likely no permission)"
+        else
+          other_errors+=("$owner_repo (delete_branch_on_merge): $out")
+          note "  - delete_branch_on_merge: FAILED (unexpected)"
+        fi
+      else
+        note "  - delete_branch_on_merge: enabled request sent"
+      fi
     fi
   fi
 
   # --- 4b) Automatically delete head branches: check ---
-  if check_delete_branch_on_merge "$owner_repo"; then
-    note "  - delete_branch_on_merge check: OK"
-  else
-    note "  - delete_branch_on_merge check: NOT ENABLED / NOT ACCESSIBLE"
+  if [[ "$delete_branch_status" -eq 2 ]]; then
+    note "  - delete_branch_on_merge check: NOT ACCESSIBLE"
+  elif [[ "$delete_branch_status" -ne 0 ]]; then
+    if check_delete_branch_on_merge "$owner_repo"; then
+      delete_branch_status=0
+    else
+      delete_branch_status=$?
+    fi
+    case "$delete_branch_status" in
+      0) note "  - delete_branch_on_merge check: OK" ;;
+      1) note "  - delete_branch_on_merge check: NOT ENABLED" ;;
+      2) note "  - delete_branch_on_merge check: NOT ACCESSIBLE" ;;
+    esac
   fi
 done
 
@@ -269,6 +423,8 @@ note "===== Summary ====="
 note "Processed repos:  $processed"
 note "Skipped dirs:     $skipped"
 note "Failed ops:       $failed_ops"
+note "Skipped enabled:  $skipped_already"
+note "Skipped unknown:  $skipped_unknown"
 
 if ((${#skipped_dirs[@]} > 0)); then
   note ""
