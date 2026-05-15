@@ -168,8 +168,11 @@ skipped=0
 failed_ops=0
 skipped_already=0
 skipped_unknown=0
+verify_failed_count=0
 
 declare -a no_permission=()
+declare -a not_accessible=()
+declare -a verify_failed=()
 declare -a other_errors=()
 declare -a skipped_dirs=()
 
@@ -220,6 +223,7 @@ for d in "$ROOT_DIR"/*/; do
     note "  - immutable-releases: already enabled (skipping)"
   elif [[ "$immutable_status" -eq 2 ]]; then
     skipped_unknown=$((skipped_unknown + 1))
+    not_accessible+=("$owner_repo (immutable-releases)")
     note "  - immutable-releases: SKIPPED (cannot read current status)"
   else
     if [[ "$DRY_RUN" == "true" ]]; then
@@ -251,14 +255,23 @@ for d in "$ROOT_DIR"/*/; do
     fi
     case "$immutable_status" in
       0) note "  - immutable-releases check: OK" ;;
-      1) note "  - immutable-releases check: NOT ENABLED" ;;
-      2) note "  - immutable-releases check: NOT ACCESSIBLE" ;;
+      1) note "  - immutable-releases check: NOT ENABLED"
+         if [[ "$DRY_RUN" == "false" ]]; then
+           verify_failed_count=$((verify_failed_count + 1))
+           verify_failed+=("$owner_repo (immutable-releases)")
+         fi ;;
+      2) note "  - immutable-releases check: NOT ACCESSIBLE"
+         if [[ "$DRY_RUN" == "false" ]]; then
+           verify_failed_count=$((verify_failed_count + 1))
+           verify_failed+=("$owner_repo (immutable-releases)")
+         fi ;;
     esac
   fi
 
   # --- 2) SHA pinning required: enable ---
   # The API requires "enabled" and (depending on context) "allowed_actions" too.
   # We fetch current values and PUT them back with sha_pinning_required=true.
+  sha_pinning_status=2
   current_enabled="$(gh api "repos/$owner_repo/actions/permissions" --jq '.enabled' 2>/dev/null || true)"
   current_allowed="$(gh api "repos/$owner_repo/actions/permissions" --jq '.allowed_actions' 2>/dev/null || true)"
 
@@ -278,6 +291,7 @@ for d in "$ROOT_DIR"/*/; do
       note "  - sha_pinning_required: already enabled (skipping)"
     elif [[ "$sha_pinning_status" -eq 2 ]]; then
       skipped_unknown=$((skipped_unknown + 1))
+      not_accessible+=("$owner_repo (sha_pinning_required)")
       note "  - sha_pinning_required: SKIPPED (cannot read current status)"
     else
       if [[ "$DRY_RUN" == "true" ]]; then
@@ -304,21 +318,27 @@ for d in "$ROOT_DIR"/*/; do
   fi
 
   # --- 2b) SHA pinning required: check ---
-  if [[ -n "${sha_pinning_status:-}" ]]; then
-    if [[ "$sha_pinning_status" -eq 2 ]]; then
-      note "  - sha_pinning_required check: NOT ACCESSIBLE"
-    elif [[ "$sha_pinning_status" -ne 0 ]]; then
-      if check_sha_pinning_required "$owner_repo"; then
-        sha_pinning_status=0
-      else
-        sha_pinning_status=$?
-      fi
-      case "$sha_pinning_status" in
-        0) note "  - sha_pinning_required check: OK" ;;
-        1) note "  - sha_pinning_required check: NOT ENABLED" ;;
-        2) note "  - sha_pinning_required check: NOT ACCESSIBLE" ;;
-      esac
+  if [[ "$sha_pinning_status" -eq 2 ]]; then
+    note "  - sha_pinning_required check: NOT ACCESSIBLE"
+  elif [[ "$sha_pinning_status" -ne 0 ]]; then
+    if check_sha_pinning_required "$owner_repo"; then
+      sha_pinning_status=0
+    else
+      sha_pinning_status=$?
     fi
+    case "$sha_pinning_status" in
+      0) note "  - sha_pinning_required check: OK" ;;
+      1) note "  - sha_pinning_required check: NOT ENABLED"
+         if [[ "$DRY_RUN" == "false" ]]; then
+           verify_failed_count=$((verify_failed_count + 1))
+           verify_failed+=("$owner_repo (sha_pinning_required)")
+         fi ;;
+      2) note "  - sha_pinning_required check: NOT ACCESSIBLE"
+         if [[ "$DRY_RUN" == "false" ]]; then
+           verify_failed_count=$((verify_failed_count + 1))
+           verify_failed+=("$owner_repo (sha_pinning_required)")
+         fi ;;
+    esac
   fi
 
   # --- 3) Always suggest updating pull request branches: enable ---
@@ -333,6 +353,7 @@ for d in "$ROOT_DIR"/*/; do
     note "  - allow_update_branch: already enabled (skipping)"
   elif [[ "$allow_update_status" -eq 2 ]]; then
     skipped_unknown=$((skipped_unknown + 1))
+    not_accessible+=("$owner_repo (allow_update_branch)")
     note "  - allow_update_branch: SKIPPED (cannot read current status)"
   else
     if [[ "$DRY_RUN" == "true" ]]; then
@@ -364,8 +385,16 @@ for d in "$ROOT_DIR"/*/; do
     fi
     case "$allow_update_status" in
       0) note "  - allow_update_branch check: OK" ;;
-      1) note "  - allow_update_branch check: NOT ENABLED" ;;
-      2) note "  - allow_update_branch check: NOT ACCESSIBLE" ;;
+      1) note "  - allow_update_branch check: NOT ENABLED"
+         if [[ "$DRY_RUN" == "false" ]]; then
+           verify_failed_count=$((verify_failed_count + 1))
+           verify_failed+=("$owner_repo (allow_update_branch)")
+         fi ;;
+      2) note "  - allow_update_branch check: NOT ACCESSIBLE"
+         if [[ "$DRY_RUN" == "false" ]]; then
+           verify_failed_count=$((verify_failed_count + 1))
+           verify_failed+=("$owner_repo (allow_update_branch)")
+         fi ;;
     esac
   fi
 
@@ -381,6 +410,7 @@ for d in "$ROOT_DIR"/*/; do
     note "  - delete_branch_on_merge: already enabled (skipping)"
   elif [[ "$delete_branch_status" -eq 2 ]]; then
     skipped_unknown=$((skipped_unknown + 1))
+    not_accessible+=("$owner_repo (delete_branch_on_merge)")
     note "  - delete_branch_on_merge: SKIPPED (cannot read current status)"
   else
     if [[ "$DRY_RUN" == "true" ]]; then
@@ -412,8 +442,16 @@ for d in "$ROOT_DIR"/*/; do
     fi
     case "$delete_branch_status" in
       0) note "  - delete_branch_on_merge check: OK" ;;
-      1) note "  - delete_branch_on_merge check: NOT ENABLED" ;;
-      2) note "  - delete_branch_on_merge check: NOT ACCESSIBLE" ;;
+      1) note "  - delete_branch_on_merge check: NOT ENABLED"
+         if [[ "$DRY_RUN" == "false" ]]; then
+           verify_failed_count=$((verify_failed_count + 1))
+           verify_failed+=("$owner_repo (delete_branch_on_merge)")
+         fi ;;
+      2) note "  - delete_branch_on_merge check: NOT ACCESSIBLE"
+         if [[ "$DRY_RUN" == "false" ]]; then
+           verify_failed_count=$((verify_failed_count + 1))
+           verify_failed+=("$owner_repo (delete_branch_on_merge)")
+         fi ;;
     esac
   fi
 done
@@ -423,6 +461,7 @@ note "===== Summary ====="
 note "Processed repos:  $processed"
 note "Skipped dirs:     $skipped"
 note "Failed ops:       $failed_ops"
+note "Verify failures:  $verify_failed_count"
 note "Skipped enabled:  $skipped_already"
 note "Skipped unknown:  $skipped_unknown"
 
@@ -432,10 +471,26 @@ if ((${#skipped_dirs[@]} > 0)); then
   for s in "${skipped_dirs[@]}"; do note "  - $s"; done
 fi
 
+if ((${#verify_failed[@]} > 0)); then
+  note ""
+  note "Verify failures (enable attempted but setting not confirmed active):"
+  printf "%s\n" "${verify_failed[@]}" | sort -u | while read -r line; do
+    note "  - $line"
+  done
+fi
+
 if ((${#no_permission[@]} > 0)); then
   note ""
   note "No permission / not accessible:"
   printf "%s\n" "${no_permission[@]}" | sort -u | while read -r line; do
+    note "  - $line"
+  done
+fi
+
+if ((${#not_accessible[@]} > 0)); then
+  note ""
+  note "Skipped (status unreadable / not accessible):"
+  printf "%s\n" "${not_accessible[@]}" | sort -u | while read -r line; do
     note "  - $line"
   done
 fi
