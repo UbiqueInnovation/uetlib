@@ -1,0 +1,20 @@
+digraph G {
+    rankdir=BT;
+    splines=ortho;
+    node [shape=record];
+
+"uetlib-test" -> "uetlib-parent"
+
+"uetlib-spring-boot-test" -> "uetlib-test"
+
+"uetlib-testcontainers" -> "uetlib-test"
+
+"uetlib-testcontainers-mariadb" -> "uetlib-testcontainers"
+"uetlib-testcontainers-mongodb" -> "uetlib-testcontainers"
+"uetlib-testcontainers-mysql" -> "uetlib-testcontainers"
+"uetlib-testcontainers-postgresql" -> "uetlib-testcontainers"
+"uetlib-testcontainers-influxdb" -> "uetlib-testcontainers"
+"uetlib-testcontainers-redis" -> "uetlib-testcontainers"
+"uetlib-testcontainers-kafka" -> "uetlib-testcontainers"
+
+}
