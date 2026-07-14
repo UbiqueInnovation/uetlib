@@ -1,0 +1,49 @@
+digraph G {
+    rankdir=BT;
+    splines=ortho;
+    node [shape=record];
+
+"uetlib-parent" -> "uetlib-bom"
+
+"uetlib-core" -> "uetlib-parent"
+
+
+"uetlib-db" -> "uetlib-core"
+
+"uetlib-storage" -> "uetlib-core"
+
+{ rank = same; "uetlib-spring-boot" }
+"uetlib-spring-boot" -> "uetlib-core"
+
+"uetlib-spring-boot-security" -> "uetlib-spring-boot"
+
+"uetlib-spring-boot-geo" -> "uetlib-spring-boot"
+"uetlib-spring-boot-geo" -> "uetlib-geo"
+
+"uetlib-monitoring" -> "uetlib-spring-boot"
+
+"uetlib-spring-cloud" -> "uetlib-spring-boot"
+
+"uetlib-spring-cloud-security" -> "uetlib-spring-cloud"
+"uetlib-spring-cloud-security" -> "uetlib-spring-boot-security"
+
+"uetlib-storage-spring-boot" -> "uetlib-spring-boot"
+"uetlib-storage-spring-boot" -> "uetlib-storage"
+
+"uetlib-spring-boot-starter-parent" -> "uetlib-bom"
+"uetlib-spring-boot-starter-parent" -> "uetlib-self-bom"
+
+
+"uetlib-job" -> "uetlib-storage-spring-boot"
+"uetlib-job" -> "uetlib-monitoring"
+"uetlib-job" -> "uetlib-spring-boot-security"
+"uetlib-job" -> "uetlib-db"
+
+
+"uetlib-geo" -> "uetlib-core"
+
+"uetlib-geo-db" -> "uetlib-db"
+"uetlib-geo-job" -> "uetlib-job"
+"uetlib-geo-db" -> "uetlib-geo"
+"uetlib-geo-job" -> "uetlib-geo"
+}
