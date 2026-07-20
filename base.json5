@@ -1,0 +1,10 @@
+{
+    "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+    "extends": [
+        "github>UbiqueInnovation/renovate-config-backend:renovate-base.json5",
+        "schedule:earlyMondays"
+    ],
+    "reviewers": [
+        "kistlers"
+    ]
+}

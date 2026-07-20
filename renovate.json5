@@ -1,13 +1,10 @@
 {
     "$schema": "https://docs.renovatebot.com/renovate-schema.json",
     "extends": [
-        "github>UbiqueInnovation/renovate-config-backend:base.json5"
+        "github>UbiqueInnovation/uetlib:base.json5"
     ],
     "reviewers": [
         "dsparber",
         "kistlers"
-    ],
-    "schedule": [
-        "before 3am on the first day of the week"
     ]
 }
