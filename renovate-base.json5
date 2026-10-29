@@ -147,6 +147,23 @@
             "allowedVersions": "/^\\d+\\.\\d+\\.\\d+$/"
         },
         {
+            "description": "Migrate uetlib Maven coordinates to the public groupId while preserving artifact names and versions",
+            "matchManagers": [
+                "maven"
+            ],
+            "matchDatasources": [
+                "maven"
+            ],
+            "matchPackageNames": [
+                "/^ch\\.ubique:uetlib.*$/"
+            ],
+            "replacementNameTemplate": "{{{replace '^ch[.]ubique:' 'ch.ubique.uetlib:' packageName}}}",
+            "automerge": false,
+            "prBodyNotes": [
+                "This migration preserves the artifact version. Verify that this version is published under ch.ubique.uetlib before merging."
+            ]
+        },
+        {
             "matchDatasources": [
                 "maven"
             ],
