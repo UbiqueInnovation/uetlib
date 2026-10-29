@@ -93,3 +93,7 @@ Create Issues for all uetlib repos here.
 ### [uetlib-testapp](https://github.com/UbiqueInnovation/uetlib-testapp)
 
 - uetlib-testapp
+
+### [uetlib-rewrite](https://github.com/UbiqueInnovation/uetlib-rewrite)
+
+- uetlib-rewrite: versioned OpenRewrite migration recipes
