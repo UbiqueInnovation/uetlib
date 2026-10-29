@@ -1,12 +1,160 @@
 {
     "$schema": "https://docs.renovatebot.com/renovate-schema.json",
     "extends": [
-        "github>UbiqueInnovation/renovate-config-backend:base.json5",
-        "schedule:earlyMondays"
+        "config:recommended",
+        ":pinAllExceptPeerDependencies",
+        "schedule:earlyMondays",
+        "abandonments:recommended",
+        "docker:enableMajor",
+        "helpers:pinGitHubActionDigests"
+    ],
+    "configMigration": true,
+    "minimumReleaseAge": "7 days",
+    "enabledManagers": [
+        "maven",
+        "github-actions",
+        "docker-compose",
+        "dockerfile",
+        "custom.regex"
+    ],
+    "ignorePaths": [
+        "**/node_modules/**",
+        "**/bower_components/**",
+        "**/vendor/**",
+        "**/examples/**",
+        "**/__tests__/**",
+        "**/tests/**",
+        "**/__fixtures__/**"
     ],
     "reviewersFromCodeOwners": true,
     "automerge": false,
+    "separateMajorMinor": true,
+    "separateMinorPatch": true,
+    "customManagers": [
+        {
+            "customType": "regex",
+            "managerFilePatterns": [
+                "/(^|/)src/(main|test)/java/.*\\.java$/"
+            ],
+            "matchStrings": [
+                "DockerImageName\\.parse\\(\\s*\"(?<depName>[^\"\\s]+?)(?::(?<currentValue>[A-Za-z0-9_][A-Za-z0-9_.-]*))?(?:@(?<currentDigest>sha256:[a-f0-9]+))?\"\\s*\\)",
+                "new\\s+[A-Za-z0-9_$.]+Container(?:\\s*<[^>]*>)?\\s*\\(\\s*\"(?<depName>[^\"\\s]+?)(?::(?<currentValue>[A-Za-z0-9_][A-Za-z0-9_.-]*))?(?:@(?<currentDigest>sha256:[a-f0-9]+))?\"\\s*\\)"
+            ],
+            "datasourceTemplate": "docker",
+            "currentValueTemplate": "{{#if currentValue}}{{{currentValue}}}{{else}}latest{{/if}}",
+            "depTypeTemplate": "testcontainers"
+        },
+        {
+            "customType": "regex",
+            "managerFilePatterns": [
+                "/^\\.github/workflows/.*\\.ya?ml$/"
+            ],
+            "matchStrings": [
+                "maven-version:\\s*[\"']?(?<currentValue>[\\d.]+)[\"']?"
+            ],
+            "datasourceTemplate": "maven",
+            "depNameTemplate": "maven",
+            "packageNameTemplate": "org.apache.maven:apache-maven",
+            "versioningTemplate": "maven"
+        }
+    ],
     "packageRules": [
+        {
+            "matchUpdateTypes": [
+                "major",
+                "minor",
+                "patch"
+            ],
+            "groupName": "Dependencies"
+        },
+        {
+            "matchManagers": [
+                "docker-compose"
+            ],
+            "groupName": "Docker Compose Updates"
+        },
+        {
+            "matchManagers": [
+                "dockerfile"
+            ],
+            "groupName": "Dockerfile Updates"
+        },
+        {
+            "matchManagers": [
+                "github-actions"
+            ],
+            "groupName": "GitHub Actions Updates",
+            "minimumReleaseAge": "1 day"
+        },
+        {
+            "matchManagers": [
+                "github-actions"
+            ],
+            "matchPackageNames": [
+                "/^UbiqueInnovation/action-systems-.+$/",
+                "m-s-abeer/update-gha-summary-with-workflow-inputs",
+                "s4u/maven-settings-action"
+            ],
+            "abandonmentThreshold": "3 years"
+        },
+        {
+            "matchManagers": [
+                "github-actions"
+            ],
+            "matchPackageNames": [
+                "UbiqueInnovation/**"
+            ],
+            "minimumReleaseAge": "4 hours"
+        },
+        {
+            "matchDatasources": [
+                "maven"
+            ],
+            "groupName": "Spring Boot/Cloud dependencies",
+            "matchPackageNames": [
+                "org.springframework.boot:spring-boot{/,}**",
+                "org.springframework.cloud:spring-cloud{/,}**",
+                "com.azure.spring:spring-cloud-azure{/,}**"
+            ]
+        },
+        {
+            "matchPackageNames": [
+                "edu.ucar:grib"
+            ],
+            "allowedVersions": "!/^8\\..*$/"
+        },
+        {
+            "matchPackageNames": [
+                "io.kubernetes:client-java"
+            ],
+            "allowedVersions": "!/^\\d+\\.\\d+\\.\\d+-legacy$/"
+        },
+        {
+            "matchPackageNames": [
+                "commons-cli:commons-cli"
+            ],
+            "allowedVersions": "!/-.+$/"
+        },
+        {
+            "matchDatasources": [
+                "maven"
+            ],
+            "groupName": "uetlib",
+            "minimumReleaseAge": "4 hours",
+            "matchPackageNames": [
+                "/^ch\\.ubique\\.uetlib:uetlib.*$/"
+            ],
+            "allowedVersions": "/^\\d+\\.\\d+\\.\\d+$/"
+        },
+        {
+            "matchDatasources": [
+                "maven"
+            ],
+            "matchPackageNames": [
+                "joda-time:joda-time"
+            ],
+            "abandonmentThreshold": "1 day"
+        },
         {
             "matchPackageNames": [
                 "*"
