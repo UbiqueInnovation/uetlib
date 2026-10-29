@@ -4,9 +4,7 @@
         "github>UbiqueInnovation/renovate-config-backend:base.json5",
         "schedule:earlyMondays"
     ],
-    "reviewers": [
-        "kistlers"
-    ],
+    "reviewersFromCodeOwners": true,
     "automerge": false,
     "packageRules": [
         {
