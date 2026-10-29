@@ -6,11 +6,15 @@ set -euo pipefail
 #  2) Require actions to be pinned to a full-length commit SHA
 #  3) Always suggest updating pull request branches
 #  4) Automatically delete head branches
+#  5) Require approval for fork PR workflows from all external contributors
+#  6) Sync "protect main/release" from UbiqueInnovation/uetlib-core
+#  7) Protect v* tags from updates and deletion (writers can still create tags)
 #
 # For every repo directory under ROOT_DIR (default: current directory).
 #
 # Requirements:
 #   - gh CLI authenticated: gh auth status
+#   - jq for comparing and preparing ruleset payloads
 #   - each directory is a git repo with an "origin" remote pointing to GitHub
 
 ROOT_DIR="."
@@ -159,9 +163,83 @@ check_delete_branch_on_merge() {
   fi
 }
 
+ruleset_payload() {
+  jq -cS '{name, target, enforcement, conditions, rules, bypass_actors}'
+}
+
+sync_ruleset() {
+  local owner_repo="$1"
+  local desired="$2"
+  local name
+  name="$(printf '%s' "$desired" | jq -er '.name')" || return 1
+  local endpoint="repos/$owner_repo/rulesets"
+  local rulesets matches count ruleset_id current result method
+
+  if ! rulesets="$(gh api "$endpoint" --paginate --slurp)"; then
+    return 1
+  fi
+  matches="$(printf '%s' "$rulesets" | jq -c --arg name "$name" '[.[][] | select(.name == $name and .source_type == "Repository")]')" || return 1
+  count="$(printf '%s' "$matches" | jq 'length')" || return 1
+  if [[ "$count" -gt 1 ]]; then
+    err "$owner_repo has multiple matching rulesets; refusing to change them."
+    return 1
+  fi
+
+  method="POST"
+  if [[ "$count" -eq 1 ]]; then
+    ruleset_id="$(printf '%s' "$matches" | jq -r '.[0].id')" || return 1
+    endpoint="$endpoint/$ruleset_id"
+    current="$(gh api "$endpoint" | ruleset_payload)" || return 1
+    if [[ "$current" == "$desired" ]]; then
+      note "  - $name: already matches"
+      return 0
+    fi
+    method="PUT"
+  fi
+
+  if [[ "$DRY_RUN" == "true" ]]; then
+    note "  - $name: DRY RUN (would sync using $method)"
+    return 0
+  fi
+  result="$(printf '%s' "$desired" | gh api -X "$method" "$endpoint" --input -)" || return 1
+  ruleset_id="$(printf '%s' "$result" | jq -er '.id')" || return 1
+  current="$(gh api "repos/$owner_repo/rulesets/$ruleset_id" | ruleset_payload)" || return 1
+  if [[ "$current" != "$desired" ]]; then
+    err "$owner_repo ruleset verification failed."
+    return 1
+  fi
+  note "  - $name: synced and verified"
+}
+
 # --- preflight ---
 command -v gh >/dev/null 2>&1 || { err "gh CLI not found. Install it (brew install gh)."; exit 1; }
+command -v jq >/dev/null 2>&1 || { err "jq not found. Install it (brew install jq)."; exit 1; }
 gh auth status >/dev/null 2>&1 || { err "gh not authenticated. Run: gh auth login"; exit 1; }
+
+# Read the reference once, before making any changes to target repositories.
+reference_ids="$(gh api repos/UbiqueInnovation/uetlib-core/rulesets --paginate --slurp |
+  jq -ce '[.[][] | select(.name == "protect main/release" and .source_type == "Repository") | .id] | select(length == 1)')" || {
+  err "Cannot identify the unique protect main/release ruleset in uetlib-core."
+  exit 1
+}
+reference_id="$(printf '%s' "$reference_ids" | jq -r '.[0]')"
+branch_ruleset="$(gh api "repos/UbiqueInnovation/uetlib-core/rulesets/$reference_id" | ruleset_payload)" || {
+  err "Cannot read the reference branch ruleset."
+  exit 1
+}
+
+# Tag creation remains unrestricted; do not add creation restrictions or bypass actors.
+tag_ruleset="$(ruleset_payload <<'JSON'
+{
+  "name": "protect release tags",
+  "target": "tag",
+  "enforcement": "active",
+  "conditions": {"ref_name": {"include": ["refs/tags/v*"], "exclude": []}},
+  "rules": [{"type": "update"}, {"type": "deletion"}],
+  "bypass_actors": []
+}
+JSON
+)"
 
 processed=0
 skipped=0
@@ -453,6 +531,41 @@ for d in "$ROOT_DIR"/*/; do
            verify_failed+=("$owner_repo (delete_branch_on_merge)")
          fi ;;
     esac
+  fi
+  # --- 5) Require approval for all external fork contributors ---
+  approval_endpoint="repos/$owner_repo/actions/permissions/fork-pr-contributor-approval"
+  if ! approval_policy="$(gh api "$approval_endpoint" --jq '.approval_policy' 2>/dev/null)"; then
+    not_accessible+=("$owner_repo (fork contributor approval)")
+    note "  - fork contributor approval: NOT ACCESSIBLE"
+  elif [[ "$approval_policy" == "all_external_contributors" ]]; then
+    skipped_already=$((skipped_already + 1))
+    note "  - fork contributor approval: already required for all external contributors"
+  elif [[ "$DRY_RUN" == "true" ]]; then
+    note "  - fork contributor approval: DRY RUN (would require approval for all external contributors)"
+  elif ! out="$(gh api -X PUT "$approval_endpoint" -f approval_policy=all_external_contributors 2>&1)"; then
+    failed_ops=$((failed_ops + 1))
+    other_errors+=("$owner_repo (fork contributor approval): $out")
+    note "  - fork contributor approval: FAILED"
+  elif approval_policy="$(gh api "$approval_endpoint" --jq '.approval_policy' 2>/dev/null)" && [[ "$approval_policy" == "all_external_contributors" ]]; then
+    note "  - fork contributor approval check: OK"
+  else
+    verify_failed_count=$((verify_failed_count + 1))
+    verify_failed+=("$owner_repo (fork contributor approval)")
+    note "  - fork contributor approval check: NOT CONFIRMED"
+  fi
+
+  # --- 6) Sync the branch ruleset, preserving unrelated rulesets ---
+  if ! sync_ruleset "$owner_repo" "$branch_ruleset"; then
+    failed_ops=$((failed_ops + 1))
+    other_errors+=("$owner_repo (protect main/release): sync failed; see output above")
+    note "  - protect main/release: FAILED"
+  fi
+
+  # --- 7) Protect release tags without restricting their creation ---
+  if ! sync_ruleset "$owner_repo" "$tag_ruleset"; then
+    failed_ops=$((failed_ops + 1))
+    other_errors+=("$owner_repo (protect release tags): sync failed; see output above")
+    note "  - protect release tags: FAILED"
   fi
 done
 
