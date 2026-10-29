@@ -1,0 +1,384 @@
+name: Publish Maven Central release
+on:
+  workflow_call:
+    inputs:
+      pom:
+        type: string
+        default: pom.xml
+        description: Root reactor POM, relative to the checkout.
+      java-version:
+        type: string
+        default: "25"
+      maven-version:
+        type: string
+        default: 3.9.11 # renovate: maven-version
+      environment:
+        type: string
+        default: maven-central
+        description: Protected environment in the calling repository.
+      create-github-release:
+        type: boolean
+        default: true
+    secrets:
+      CENTRAL_USERNAME:
+        required: false
+        description: Central Portal token username. May instead be supplied by the environment.
+      CENTRAL_PASSWORD:
+        required: false
+        description: Central Portal token password. May instead be supplied by the environment.
+      MAVEN_SIGNING_KEY:
+        required: false
+        description: ASCII-armored private signing key. May instead be supplied by the environment.
+      MAVEN_SIGNING_PASSPHRASE:
+        required: false
+        description: Signing key passphrase. May instead be supplied by the environment.
+permissions:
+  contents: read
+concurrency:
+  group: central-${{ github.repository }}-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  validate:
+    name: Validate release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.release.outputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Validate tag and coordinates
+        id: release
+        shell: python
+        env:
+          POM: ${{ inputs.pom }}
+          RELEASE_REF: ${{ github.ref }}
+          REPOSITORY: ${{ github.repository }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          from pathlib import Path
+          import os
+          import re
+          import subprocess
+          import xml.etree.ElementTree as ET
+
+          from pathlib import Path
+          import os
+          pom = Path(os.environ["POM"]).resolve()
+          if not pom.is_relative_to(Path.cwd()) or not pom.is_file():
+              raise SystemExit("pom must be an existing file inside the checkout")
+
+          ref = os.environ["RELEASE_REF"]
+          if not ref.startswith("refs/tags/v"):
+              raise SystemExit("Publishing requires a v* release tag")
+          version = ref.removeprefix("refs/tags/v")
+          if not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z]+(?:[.-][0-9A-Za-z]+)*)?", version) or "SNAPSHOT" in version.upper():
+              raise SystemExit("Tag must contain a release version, never a snapshot")
+          owner, repository = os.environ["REPOSITORY"].split("/", 1)
+          if owner != "UbiqueInnovation" or not repository.startswith("uetlib-") or repository == "uetlib-testapp":
+              raise SystemExit("Only uetlib library repositories may publish")
+          ns = {"m": "http://maven.apache.org/POM/4.0.0"}
+          project = ET.parse(pom).getroot()
+          group = project.findtext("m:groupId", namespaces=ns) or project.findtext("m:parent/m:groupId", namespaces=ns)
+          artifact = project.findtext("m:artifactId", namespaces=ns)
+          if group != "ch.ubique.uetlib" or artifact not in (repository, repository + "-parent"):
+              raise SystemExit("Unexpected root Maven coordinates")
+          branches = subprocess.check_output(["git", "for-each-ref", "--format=%(refname)", "refs/remotes/origin"], text=True).splitlines()
+          allowed = [b for b in branches if b == "refs/remotes/origin/" + os.environ["DEFAULT_BRANCH"] or b.startswith("refs/remotes/origin/release/")]
+          if not any(subprocess.run(["git", "merge-base", "--is-ancestor", "HEAD", b], check=False).returncode == 0 for b in allowed):
+              raise SystemExit("The release commit must belong to the default branch or a release branch")
+          with open(os.environ["GITHUB_OUTPUT"], "a") as output:
+              output.write("version=" + version + "\n")
+  publish:
+    name: Publish release
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: ${{ inputs.environment }}
+    permissions:
+      contents: write
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up Java
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          distribution: temurin
+          java-version: ${{ inputs.java-version }}
+          cache: maven
+          cache-dependency-path: "**/pom.xml"
+      - name: Set up Maven
+        env:
+          MAVEN_VERSION: ${{ inputs.maven-version }}
+        run: |
+          set -euo pipefail
+          [[ "$MAVEN_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || exit 1
+          archive="$RUNNER_TEMP/apache-maven-$MAVEN_VERSION-bin.tar.gz"
+          url="https://repo.maven.apache.org/maven2/org/apache/maven/apache-maven/$MAVEN_VERSION/apache-maven-$MAVEN_VERSION-bin.tar.gz"
+          curl --fail --silent --show-error --location "$url" -o "$archive"
+          checksum="$(curl --fail --silent --show-error --location "$url.sha512")"
+          python3 -c 'import hashlib, pathlib, sys; sys.exit(0 if hashlib.sha512(pathlib.Path(sys.argv[1]).read_bytes()).hexdigest() == sys.argv[2] else "Maven SHA-512 mismatch")' "$archive" "$checksum"
+          tar -xzf "$archive" -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/apache-maven-$MAVEN_VERSION/bin" >> "$GITHUB_PATH"
+      - name: Set release version
+        env:
+          POM: ${{ inputs.pom }}
+          VERSION: ${{ needs.validate.outputs.version }}
+        run: |
+          mvn --batch-mode --no-transfer-progress -f "$POM" org.codehaus.mojo:versions-maven-plugin:2.21.0:set "-DnewVersion=$VERSION" -DprocessAllModules=true -DgenerateBackupPoms=false
+      - name: Build, test and stage artifacts
+        env:
+          STAGING: ${{ runner.temp }}/central-staging
+          BUNDLE: ${{ runner.temp }}/central-bundle.zip
+          POM: ${{ inputs.pom }}
+        run: |
+          set -euo pipefail
+          rm -rf "$STAGING"
+          mkdir -p "$STAGING"
+          mvn --batch-mode --no-transfer-progress -f "$POM" clean install \
+            org.apache.maven.plugins:maven-deploy-plugin:3.1.4:deploy \
+            "-DaltDeploymentRepository=central-staging::file://$STAGING" \
+            -Dmaven.deploy.skip=false
+      - name: Generate sources and Javadoc
+        env:
+          POM: ${{ inputs.pom }}
+        run: |
+          mvn --batch-mode --no-transfer-progress -f "$POM" \
+            org.apache.maven.plugins:maven-source-plugin:3.3.1:jar-no-fork \
+            org.apache.maven.plugins:maven-javadoc-plugin:3.11.3:jar \
+            org.apache.maven.plugins:maven-help-plugin:3.5.1:effective-pom \
+            "-Doutput=$RUNNER_TEMP/central-effective-pom.xml"
+      - name: Stage documentation
+        shell: python
+        env:
+          STAGING: ${{ runner.temp }}/central-staging
+        run: |
+          from pathlib import Path
+          import os
+          import shutil
+          import xml.etree.ElementTree as ET
+
+          ns = {"m": "http://maven.apache.org/POM/4.0.0"}
+          root = ET.parse(Path(os.environ["RUNNER_TEMP"]) / "central-effective-pom.xml").getroot()
+          projects = [root] if root.tag.endswith("}project") else root.findall("m:project", ns)
+          if not projects:
+              raise SystemExit("No effective Maven projects found")
+          for project in projects:
+              group = project.findtext("m:groupId", namespaces=ns)
+              artifact = project.findtext("m:artifactId", namespaces=ns)
+              version = project.findtext("m:version", namespaces=ns)
+              if group != "ch.ubique.uetlib" or not artifact.startswith("uetlib-"):
+                  raise SystemExit("Unexpected effective Maven coordinates")
+              if project.findtext("m:packaging", default="jar", namespaces=ns) != "jar" or artifact.endswith("-coverage") or artifact == "uetlib-testapp":
+                  continue
+              build = Path(project.findtext("m:build/m:directory", namespaces=ns)).resolve()
+              if not build.is_relative_to(Path.cwd()):
+                  raise SystemExit("Build output must be inside the checkout")
+              final_name = project.findtext("m:build/m:finalName", namespaces=ns)
+              destination = Path(os.environ["STAGING"]) / Path(*group.split(".")) / artifact / version
+              if not destination.is_dir():
+                  raise SystemExit("Expected reactor artifact was not staged: " + artifact)
+              for classifier in ("sources", "javadoc"):
+                  source = build / (final_name + "-" + classifier + ".jar")
+                  target = destination / (artifact + "-" + version + "-" + classifier + ".jar")
+                  if source.exists() and not target.exists():
+                      shutil.copyfile(source, target)
+      - name: Validate, sign and bundle
+        id: bundle
+        shell: python
+        env:
+          STAGING: ${{ runner.temp }}/central-staging
+          BUNDLE: ${{ runner.temp }}/central-bundle.zip
+          VERSION: ${{ needs.validate.outputs.version }}
+          MAVEN_SIGNING_KEY: ${{ secrets.MAVEN_SIGNING_KEY }}
+          MAVEN_SIGNING_PASSPHRASE: ${{ secrets.MAVEN_SIGNING_PASSPHRASE }}
+        run: |
+          from pathlib import Path
+          import hashlib
+          import os
+          import subprocess
+          import tempfile
+          import xml.etree.ElementTree as ET
+          import zipfile
+
+
+          def collect_artifacts(staging, version):
+              ns = {"m": "http://maven.apache.org/POM/4.0.0"}
+              artifacts = []
+              for pom in sorted(staging.rglob("*.pom")):
+                  project = ET.parse(pom).getroot()
+                  group = project.findtext("m:groupId", namespaces=ns) or project.findtext("m:parent/m:groupId", namespaces=ns)
+                  artifact = project.findtext("m:artifactId", namespaces=ns)
+                  actual_version = project.findtext("m:version", namespaces=ns) or project.findtext("m:parent/m:version", namespaces=ns)
+                  if group != "ch.ubique.uetlib" or not artifact or not artifact.startswith("uetlib-") or actual_version != version:
+                      raise ValueError("Staging contains unexpected coordinates: " + str(pom))
+                  directory = Path(*group.split(".")) / artifact / version
+                  if pom.relative_to(staging) != directory / (artifact + "-" + version + ".pom"):
+                      raise ValueError("Unexpected Maven repository path: " + str(pom))
+                  if artifact.endswith("-coverage") or artifact == "uetlib-testapp":
+                      continue
+                  prefix = artifact + "-" + version
+                  packaging = project.findtext("m:packaging", default="jar", namespaces=ns)
+                  if packaging not in ("jar", "pom"):
+                      raise ValueError("Unsupported packaging: " + packaging)
+                  if packaging == "jar":
+                      main_jar = pom.parent / (prefix + ".jar")
+                      if main_jar.is_file() and zipfile.is_zipfile(main_jar):
+                          with zipfile.ZipFile(main_jar) as source:
+                              names = source.namelist()
+                              # Declarative recipe JARs contain resources, not a Java API.
+                              if any(n.startswith("META-INF/rewrite/") for n in names) and not any(n.endswith(".class") for n in names):
+                                  url = project.findtext("m:url", default="https://github.com/UbiqueInnovation/uetlib-rewrite", namespaces=ns)
+                                  for classifier in ("sources", "javadoc"):
+                                      attachment = pom.parent / (prefix + "-" + classifier + ".jar")
+                                      if not attachment.exists():
+                                          with zipfile.ZipFile(attachment, "w", zipfile.ZIP_DEFLATED) as output:
+                                              output.writestr("README.txt", "Declarative OpenRewrite recipes; no Java API. Source and usage: " + url + "\n")
+                                              if classifier == "sources":
+                                                  for name in names:
+                                                      if name.startswith("META-INF/rewrite/") and not name.endswith("/"):
+                                                          output.writestr(name, source.read(name))
+                      for suffix in (".jar", "-sources.jar", "-javadoc.jar"):
+                          jar = pom.parent / (prefix + suffix)
+                          if not jar.is_file() or not zipfile.is_zipfile(jar):
+                              raise ValueError("Missing or invalid required artifact: " + str(jar))
+                  artifacts.extend(p for p in sorted(pom.parent.iterdir()) if p.name.startswith(prefix) and p.suffix in (".jar", ".pom"))
+              if not artifacts:
+                  raise ValueError("No publishable artifacts were staged")
+              if any(p.is_symlink() or not p.resolve().is_relative_to(staging.resolve()) for p in artifacts):
+                  raise ValueError("Staged artifacts must be regular files inside staging")
+              return artifacts
+
+
+          def build_bundle(staging, version, destination, signer):
+              artifacts = collect_artifacts(staging, version)
+              with zipfile.ZipFile(destination, "w", zipfile.ZIP_DEFLATED) as archive:
+                  for artifact in artifacts:
+                      relative = artifact.relative_to(staging).as_posix()
+                      archive.write(artifact, relative)
+                      signature = signer(artifact)
+                      archive.writestr(relative + ".asc", signature)
+                      data = artifact.read_bytes()
+                      for algorithm in ("md5", "sha1", "sha256", "sha512"):
+                          archive.writestr(relative + "." + algorithm, hashlib.new(algorithm, data).hexdigest())
+              return len(artifacts)
+
+
+          def main():
+              staging = Path(os.environ["STAGING"])
+              version = os.environ["VERSION"]
+              # Validate the entire staging repository before importing any signing key.
+              collect_artifacts(staging, version)
+              key = os.environ.get("MAVEN_SIGNING_KEY", "")
+              if not key:
+                  raise SystemExit("MAVEN_SIGNING_KEY is required")
+              with tempfile.TemporaryDirectory(prefix="uetlib-gpg-", dir=os.environ["RUNNER_TEMP"]) as home:
+                  env = dict(os.environ, GNUPGHOME=home)
+                  try:
+                      imported = subprocess.run(["gpg", "--batch", "--import"], input=key, text=True, capture_output=True, env=env)
+                      if imported.returncode:
+                          raise SystemExit("Could not import the signing key")
+                      def sign(artifact):
+                          result = subprocess.run(["gpg", "--batch", "--yes", "--pinentry-mode", "loopback", "--passphrase-fd", "0", "--armor", "--detach-sign", "--output", "-", str(artifact)], input=os.environ.get("MAVEN_SIGNING_PASSPHRASE", "").encode(), capture_output=True, env=env)
+                          if result.returncode:
+                              raise RuntimeError("Could not sign " + artifact.name)
+                          verified = subprocess.run(["gpg", "--batch", "--verify", "-", str(artifact)], input=result.stdout, capture_output=True, env=env)
+                          if verified.returncode:
+                              raise RuntimeError("Signature verification failed for " + artifact.name)
+                          return result.stdout
+                      count = build_bundle(staging, version, Path(os.environ["BUNDLE"]), sign)
+                  finally:
+                      subprocess.run(["gpgconf", "--kill", "gpg-agent"], check=False, env=env)
+              print("Validated and signed " + str(count) + " artifacts")
+
+
+          if __name__ == "__main__":
+              main()
+      - name: Upload and await publication
+        shell: python
+        env:
+          STAGING: ${{ runner.temp }}/central-staging
+          BUNDLE: ${{ runner.temp }}/central-bundle.zip
+          CENTRAL_USERNAME: ${{ secrets.CENTRAL_USERNAME }}
+          CENTRAL_PASSWORD: ${{ secrets.CENTRAL_PASSWORD }}
+        run: |
+          import base64
+          import json
+          import os
+          from pathlib import Path
+          import re
+          import subprocess
+          import time
+          import urllib.error
+          import urllib.request
+
+          username = os.environ.get("CENTRAL_USERNAME", "")
+          password = os.environ.get("CENTRAL_PASSWORD", "")
+          if not username or not password:
+              raise SystemExit("Central publishing credentials are required")
+          token = base64.b64encode((username + ":" + password).encode()).decode()
+          print("::add-mask::" + token, flush=True)
+          base = "https://central.sonatype.com/api/v1/publisher"
+          result = subprocess.run(["curl", "--fail-with-body", "--silent", "--show-error", "--connect-timeout", "30", "--max-time", "600", "--config", "-", "--form", "bundle=@" + os.environ["BUNDLE"], base + "/upload?publishingType=AUTOMATIC"], input='header = "Authorization: Bearer ' + token + '"\n', text=True, capture_output=True)
+          if result.returncode:
+              raise SystemExit("Central upload failed: " + result.stdout + result.stderr)
+          deployment = result.stdout.strip()
+          if not re.fullmatch(r"[0-9a-fA-F-]{36}", deployment):
+              raise SystemExit("Central returned an unexpected deployment ID")
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as summary:
+              summary.write("Central deployment: `" + deployment + "`\n")
+          for attempt in range(120):
+              request = urllib.request.Request(base + "/status?id=" + deployment, data=b"", headers={"Authorization": "Bearer " + token}, method="POST")
+              try:
+                  with urllib.request.urlopen(request, timeout=30) as response:
+                      status = json.load(response)
+              except urllib.error.HTTPError as error:
+                  if error.code < 500 and error.code != 429:
+                      raise SystemExit("Central status request failed: HTTP " + str(error.code))
+                  time.sleep(10)
+                  continue
+              except (urllib.error.URLError, TimeoutError):
+                  if attempt == 119:
+                      raise
+                  time.sleep(10)
+                  continue
+              state = status.get("deploymentState")
+              print("Central deployment state: " + str(state), flush=True)
+              if state == "PUBLISHED":
+                  break
+              if state == "FAILED":
+                  raise SystemExit("Central validation failed: " + json.dumps(status.get("errors", {})))
+              time.sleep(10)
+          else:
+              raise SystemExit("Timed out waiting for publication; inspect deployment " + deployment + " before retrying")
+      - name: Create GitHub release
+        if: ${{ inputs.create-github-release }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            args=(release create "$TAG" --verify-tag --generate-notes --title "$TAG")
+            if [[ "$TAG" =~ -[A-Za-z] ]]; then
+              args+=(--prerelease)
+            fi
+            gh "${args[@]}"
+          fi
+      - name: Clean staging
+        if: ${{ always() }}
+        env:
+          STAGING: ${{ runner.temp }}/central-staging
+          BUNDLE: ${{ runner.temp }}/central-bundle.zip
+        run: |
+          rm -rf "$STAGING" "$BUNDLE"

@@ -2,6 +2,8 @@
 
 Create Issues for all uetlib repos here.
 
+See [shared Maven workflows](WORKFLOWS.md) for build/test and explicit Maven Central publishing.
+
 ## Current uetlib repos with their artifacts
 
 ### [uetlib-self-bom](https://github.com/UbiqueInnovation/uetlib-self-bom)
