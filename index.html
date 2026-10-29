@@ -1,0 +1,266 @@
+---
+layout: null
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>uetlib | Java &amp; Spring Boot backend libraries by Ubique</title>
+  <meta name="description" content="uetlib is an open source collection of Java and Spring Boot libraries for building production backends: storage, jobs, payments, geo, monitoring, testing and more.">
+  <meta property="og:title" content="uetlib">
+  <meta property="og:description" content="Open source Java &amp; Spring Boot backend libraries by Ubique.">
+  <meta property="og:url" content="https://uetlib.ubique.ch/">
+  <link rel="canonical" href="https://uetlib.ubique.ch/">
+  <style>
+    :root {
+      --bg: #ffffff; --fg: #1a1d23; --muted: #5b6270; --card: #f6f7f9;
+      --border: #e3e6eb; --accent: #0b6bcb; --accent-soft: #e7f1fb;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg: #0f1115; --fg: #e8eaee; --muted: #9aa2b1; --card: #171a21;
+              --border: #262b35; --accent: #5aa9f5; --accent-soft: #14263a; }
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+           background: var(--bg); color: var(--fg); }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+    header.nav { border-bottom: 1px solid var(--border); }
+    header.nav .wrap { display: flex; align-items: center; justify-content: space-between; height: 64px; }
+    .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 20px; color: var(--fg); }
+    .logo { width: 36px; height: 36px; border-radius: 8px; border: 2px dashed var(--muted);
+            display: grid; place-items: center; font-size: 10px; color: var(--muted); font-weight: 600; }
+    .logo.big { width: 96px; height: 96px; border-radius: 20px; font-size: 13px; margin: 0 auto 24px; }
+    nav a { margin-left: 20px; color: var(--muted); font-weight: 500; }
+    .hero { text-align: center; padding: 80px 0 56px; }
+    .hero h1 { font-size: clamp(32px, 5vw, 52px); line-height: 1.15; margin: 0 0 16px; }
+    .hero p { font-size: 19px; color: var(--muted); max-width: 680px; margin: 0 auto 32px; }
+    .btn { display: inline-block; padding: 11px 22px; border-radius: 8px; font-weight: 600; margin: 4px; }
+    .btn.primary { background: var(--accent); color: #fff; }
+    .btn.ghost { border: 1px solid var(--border); color: var(--fg); }
+    .btn:hover { text-decoration: none; opacity: .9; }
+    section { padding: 40px 0; }
+    h2 { font-size: 28px; margin: 0 0 8px; }
+    .lead { color: var(--muted); margin: 0 0 28px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 18px; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px 22px;
+            display: flex; flex-direction: column; transition: border-color .15s, transform .15s; color: var(--fg); }
+    a.card:hover { border-color: var(--accent); transform: translateY(-2px); text-decoration: none; }
+    .card h3 { margin: 0 0 6px; font-size: 17px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--accent); }
+    .card p { margin: 0 0 12px; color: var(--muted); font-size: 15px; flex: 1; }
+    .modules { display: flex; flex-wrap: wrap; gap: 6px; }
+    .modules code { font-size: 12px; background: var(--accent-soft); color: var(--accent); padding: 2px 8px; border-radius: 999px; }
+    pre { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px;
+          overflow-x: auto; font-size: 14px; line-height: 1.5; }
+    .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px; }
+    .steps h3 { margin: 0 0 6px; font-size: 17px; }
+    .steps p { margin: 0 0 10px; color: var(--muted); font-size: 15px; }
+    footer { border-top: 1px solid var(--border); margin-top: 48px; padding: 28px 0; color: var(--muted); font-size: 14px; }
+    footer .wrap { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+  </style>
+</head>
+<body>
+
+<header class="nav">
+  <div class="wrap">
+    <a class="brand" href="/"><span class="logo" aria-label="logo placeholder">LOGO</span>uetlib</a>
+    <nav>
+      <a href="#components">Components</a>
+      <a href="#getting-started">Getting started</a>
+      <a href="#license">License</a>
+      <a href="https://github.com/UbiqueInnovation/uetlib">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <div class="hero">
+    <div class="logo big" aria-label="logo placeholder">LOGO</div>
+    <h1>Batteries for your Java backend</h1>
+    <p>uetlib is a collection of modular Java and Spring Boot libraries, battle-tested in production at
+       <a href="https://www.ubique.ch">Ubique</a>. Storage, jobs, payments, geo, monitoring and testing,
+       all versioned together and ready to drop in.</p>
+    <a class="btn primary" href="#getting-started">Get started</a>
+    <a class="btn ghost" href="https://github.com/UbiqueInnovation/uetlib">View on GitHub</a>
+  </div>
+
+  <section id="components">
+    <h2>Libraries</h2>
+    <p class="lead">Pick only what you need. Every library is an independent Maven artifact.</p>
+    <div class="grid">
+      <a class="card" href="https://github.com/UbiqueInnovation/uetlib-core">
+        <h3>uetlib-core</h3>
+        <p>Common utilities and helpers used across all uetlib modules.</p>
+        <div class="modules"><code>uetlib-core</code></div>
+      </a>
+      <a class="card" href="https://github.com/UbiqueInnovation/uetlib-db">
+        <h3>uetlib-db</h3>
+        <p>Database utilities and helpers.</p>
+        <div class="modules"><code>uetlib-db</code></div>
+      </a>
+      <a class="card" href="https://github.com/UbiqueInnovation/uetlib-storage">
+        <h3>uetlib-storage</h3>
+        <p>Unified object storage clients for Amazon S3, Azure Blob, Cloudflare R2, MinIO and the file system, with declarative storage mappings and image variants.</p>
+        <div class="modules"><code>uetlib-storage</code></div>
+      </a>
+      <a class="card" href="https://github.com/UbiqueInnovation/uetlib-storage-spring-boot">
+        <h3>uetlib-storage-spring-boot</h3>
+        <p>Spring Boot integration for uetlib-storage, including an opt-in storage HTTP proxy endpoint.</p>
+        <div class="modules"><code>uetlib-storage-spring-boot</code></div>
+      </a>
+      <a class="card" href="https://github.com/UbiqueInnovation/uetlib-job">
+        <h3>uetlib-job</h3>
+        <p>A job framework for scheduling and running background work.</p>
+        <div class="modules"><code>uetlib-job</code></div>
+      </a>
+      <a class="card" href="https://github.com/UbiqueInnovation/uetlib-payment">
+        <h3>uetlib-payment</h3>
+        <p>Provider-neutral payment abstractions with adapters for Datatrans and PostFinance.</p>
+        <div class="modules"><code>uetlib-payment</code><code>-datatrans</code><code>-postfinance</code></div>
+      </a>
+      <a class="card" href="https://github.com/UbiqueInnovation/uetlib-geo">
+        <h3>uetlib-geo</h3>
+        <p>Geospatial data handling, coordinate utilities and conversions, with database and job integrations.</p>
+        <div class="modules"><code>uetlib-geo</code><code>-db</code><code>-job</code></div>
+      </a>
+      <a class="card" href="https://github.com/UbiqueInnovation/uetlib-webp">
+        <h3>uetlib-webp</h3>
+        <p>Production-oriented, in-process WebP encoder for Java. Convert PNG or JPEG to WebP in one line.</p>
+        <div class="modules"><code>uetlib-webp</code></div>
+      </a>
+      <a class="card" href="https://github.com/UbiqueInnovation/uetlib-monitoring">
+        <h3>uetlib-monitoring</h3>
+        <p>Info and check endpoints plus BetterUptime heartbeats for service monitoring.</p>
+        <div class="modules"><code>uetlib-monitoring</code></div>
+      </a>
+      <a class="card" href="https://github.com/UbiqueInnovation/uetlib-spring-boot">
+        <h3>uetlib-spring-boot</h3>
+        <p>Spring Boot helpers and auto-configuration, including geo and security support.</p>
+        <div class="modules"><code>uetlib-spring-boot</code><code>-geo</code><code>-security</code></div>
+      </a>
+      <a class="card" href="https://github.com/UbiqueInnovation/uetlib-spring-cloud">
+        <h3>uetlib-spring-cloud</h3>
+        <p>Spring Cloud helpers, including security integration.</p>
+        <div class="modules"><code>uetlib-spring-cloud</code><code>-security</code></div>
+      </a>
+    </div>
+  </section>
+
+  <section>
+    <h2>Testing</h2>
+    <p class="lead">Utilities to make integration tests fast and reliable.</p>
+    <div class="grid">
+      <a class="card" href="https://github.com/UbiqueInnovation/uetlib-test">
+        <h3>uetlib-test</h3>
+        <p>General test utilities and helpers.</p>
+        <div class="modules"><code>uetlib-test</code></div>
+      </a>
+      <a class="card" href="https://github.com/UbiqueInnovation/uetlib-spring-boot-test">
+        <h3>uetlib-spring-boot-test</h3>
+        <p>Test support for Spring Boot applications.</p>
+        <div class="modules"><code>uetlib-spring-boot-test</code></div>
+      </a>
+      <a class="card" href="https://github.com/UbiqueInnovation/uetlib-testcontainers">
+        <h3>uetlib-testcontainers</h3>
+        <p>Preconfigured Testcontainers for common infrastructure.</p>
+        <div class="modules"><code>influxdb</code><code>kafka</code><code>mariadb</code><code>mongodb</code><code>mysql</code><code>postgresql</code><code>redis</code></div>
+      </a>
+      <a class="card" href="https://github.com/UbiqueInnovation/uetlib-testapp">
+        <h3>uetlib-testapp</h3>
+        <p>Reference application exercising the full uetlib and test framework.</p>
+        <div class="modules"><code>uetlib-testapp</code></div>
+      </a>
+    </div>
+  </section>
+
+  <section>
+    <h2>Build &amp; dependency management</h2>
+    <p class="lead">Consistent versions across all your projects.</p>
+    <div class="grid">
+      <a class="card" href="https://github.com/UbiqueInnovation/uetlib-self-bom">
+        <h3>uetlib-self-bom</h3>
+        <p>Bill of materials pinning the versions of all <code>uetlib-*</code> modules.</p>
+        <div class="modules"><code>uetlib-self-bom</code></div>
+      </a>
+      <a class="card" href="https://github.com/UbiqueInnovation/uetlib-bom">
+        <h3>uetlib-bom</h3>
+        <p>Bill of materials for the third-party dependencies used by uetlib.</p>
+        <div class="modules"><code>uetlib-bom</code></div>
+      </a>
+      <a class="card" href="https://github.com/UbiqueInnovation/uetlib-parent">
+        <h3>uetlib-parent</h3>
+        <p>Maven parent POM with dependency management, plugin management and sensible defaults.</p>
+        <div class="modules"><code>uetlib-parent</code></div>
+      </a>
+      <a class="card" href="https://github.com/UbiqueInnovation/uetlib-spring-boot-starter-parent">
+        <h3>uetlib-spring-boot-starter-parent</h3>
+        <p>Parent POM based on Spring Boot Starter Parent, preconfigured with the uetlib BOMs and Spring Cloud.</p>
+        <div class="modules"><code>uetlib-spring-boot-starter-parent</code></div>
+      </a>
+    </div>
+  </section>
+
+  <section id="getting-started">
+    <h2>Getting started</h2>
+    <p class="lead">Two ways to bring uetlib into your Maven project.</p>
+    <div class="steps">
+      <div>
+        <h3>Spring Boot projects: use the parent</h3>
+        <p>Inherits Spring Boot, Spring Cloud and all uetlib versions in one go.</p>
+<pre><code>&lt;parent&gt;
+  &lt;groupId&gt;ch.ubique&lt;/groupId&gt;
+  &lt;artifactId&gt;uetlib-spring-boot-starter-parent&lt;/artifactId&gt;
+  &lt;version&gt;${uetlib.version}&lt;/version&gt;
+&lt;/parent&gt;</code></pre>
+      </div>
+      <div>
+        <h3>Any project: import the BOM</h3>
+        <p>Keep your own parent and just manage uetlib versions.</p>
+<pre><code>&lt;dependencyManagement&gt;
+  &lt;dependencies&gt;
+    &lt;dependency&gt;
+      &lt;groupId&gt;ch.ubique&lt;/groupId&gt;
+      &lt;artifactId&gt;uetlib-self-bom&lt;/artifactId&gt;
+      &lt;version&gt;${uetlib.version}&lt;/version&gt;
+      &lt;type&gt;pom&lt;/type&gt;
+      &lt;scope&gt;import&lt;/scope&gt;
+    &lt;/dependency&gt;
+  &lt;/dependencies&gt;
+&lt;/dependencyManagement&gt;</code></pre>
+      </div>
+    </div>
+    <p>Then add the modules you need, without a version:</p>
+<pre><code>&lt;dependency&gt;
+  &lt;groupId&gt;ch.ubique&lt;/groupId&gt;
+  &lt;artifactId&gt;uetlib-storage&lt;/artifactId&gt;
+&lt;/dependency&gt;</code></pre>
+  </section>
+
+  <section>
+    <h2>Contributing</h2>
+    <p class="lead">Found a bug or have an idea? Issues for all uetlib repositories are tracked centrally in
+      <a href="https://github.com/UbiqueInnovation/uetlib/issues">UbiqueInnovation/uetlib</a>.
+      Pull requests are welcome in the individual component repositories.</p>
+  </section>
+
+  <section id="license">
+    <h2>License</h2>
+    <p class="lead">uetlib is open source and licensed under the
+      <a href="https://www.apache.org/licenses/LICENSE-2.0">Apache License, Version 2.0</a>.
+      You are free to use, modify and distribute it, including in commercial projects.</p>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>&copy; Ubique Innovation AG &middot; Licensed under <a href="https://www.apache.org/licenses/LICENSE-2.0">Apache 2.0</a></span>
+    <span><a href="https://github.com/UbiqueInnovation/uetlib">GitHub</a> &middot; <a href="https://www.ubique.ch">ubique.ch</a></span>
+  </div>
+</footer>
+
+</body>
+</html>
