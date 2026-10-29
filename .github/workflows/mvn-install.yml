@@ -1,0 +1,65 @@
+name: Maven install
+on:
+  workflow_call:
+    inputs:
+      pom:
+        type: string
+        default: pom.xml
+        description: Root reactor POM, relative to the checkout.
+      java-version:
+        type: string
+        default: "25"
+      maven-version:
+        type: string
+        default: 3.9.11 # renovate: maven-version
+permissions:
+  contents: read
+jobs:
+  build:
+    name: Build Project
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up Java
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          distribution: temurin
+          java-version: ${{ inputs.java-version }}
+          cache: maven
+          cache-dependency-path: "**/pom.xml"
+      - name: Set up Maven
+        env:
+          MAVEN_VERSION: ${{ inputs.maven-version }}
+        run: |
+          set -euo pipefail
+          [[ "$MAVEN_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || exit 1
+          archive="$RUNNER_TEMP/apache-maven-$MAVEN_VERSION-bin.tar.gz"
+          url="https://repo.maven.apache.org/maven2/org/apache/maven/apache-maven/$MAVEN_VERSION/apache-maven-$MAVEN_VERSION-bin.tar.gz"
+          curl --fail --silent --show-error --location "$url" -o "$archive"
+          checksum="$(curl --fail --silent --show-error --location "$url.sha512")"
+          python3 -c 'import hashlib, pathlib, sys; sys.exit(0 if hashlib.sha512(pathlib.Path(sys.argv[1]).read_bytes()).hexdigest() == sys.argv[2] else "Maven SHA-512 mismatch")' "$archive" "$checksum"
+          tar -xzf "$archive" -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/apache-maven-$MAVEN_VERSION/bin" >> "$GITHUB_PATH"
+      - name: Validate POM path
+        env:
+          POM: ${{ inputs.pom }}
+        shell: python
+        run: |
+          from pathlib import Path
+          import os
+          pom = Path(os.environ["POM"]).resolve()
+          if not pom.is_relative_to(Path.cwd()) or not pom.is_file():
+              raise SystemExit("pom must be an existing file inside the checkout")
+      - name: Build, test and install
+        env:
+          POM: ${{ inputs.pom }}
+        run: |
+          mvn --batch-mode --no-transfer-progress -f "$POM" clean install
