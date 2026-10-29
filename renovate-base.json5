@@ -15,7 +15,8 @@
         "github-actions",
         "docker-compose",
         "dockerfile",
-        "custom.regex"
+        "custom.regex",
+        "pip_requirements"
     ],
     "ignorePaths": [
         "**/node_modules/**",
@@ -50,7 +51,8 @@
                 "/^\\.github/workflows/.*\\.ya?ml$/"
             ],
             "matchStrings": [
-                "maven-version:\\s*[\"']?(?<currentValue>[\\d.]+)[\"']?"
+                "maven-version:\\s*[\"']?(?<currentValue>[\\d.]+)[\"']?",
+                "default:\\s*[\"']?(?<currentValue>[\\d.]+)[\"']?\\s*# renovate: maven-version"
             ],
             "datasourceTemplate": "maven",
             "depNameTemplate": "maven",

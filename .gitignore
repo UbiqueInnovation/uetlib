@@ -22,3 +22,5 @@
 **/import
 
 .sonar/
+
+__pycache__/
