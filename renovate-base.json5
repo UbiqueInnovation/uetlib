@@ -147,7 +147,7 @@
             "allowedVersions": "/^\\d+\\.\\d+\\.\\d+$/"
         },
         {
-            "description": "Migrate uetlib Maven coordinates to the public groupId while preserving artifact names and versions",
+            "description": "Migrate uetlib Maven coordinates to the public groupId",
             "matchManagers": [
                 "maven"
             ],
@@ -160,8 +160,150 @@
             "replacementNameTemplate": "{{{replace '^ch[.]ubique:' 'ch.ubique.uetlib:' packageName}}}",
             "automerge": false,
             "prBodyNotes": [
-                "This migration preserves the artifact version. Verify that this version is published under ch.ubique.uetlib before merging."
+                "This migration changes the Maven groupId. Verify that the target uetlib release is available under ch.ubique.uetlib before merging."
             ]
+        },
+        {
+            "description": "Target the first public migration release",
+            "matchManagers": [
+                "maven"
+            ],
+            "matchDatasources": [
+                "maven"
+            ],
+            "matchPackageNames": [
+                "ch.ubique:uetlib-errorprone",
+                "ch.ubique:uetlib-webp"
+            ],
+            "replacementNameTemplate": "{{{replace '^ch[.]ubique:' 'ch.ubique.uetlib:' packageName}}}",
+            "replacementVersion": "1.0.0",
+            "automerge": false
+        },
+        {
+            "description": "Target the first public migration release",
+            "matchManagers": [
+                "maven"
+            ],
+            "matchDatasources": [
+                "maven"
+            ],
+            "matchPackageNames": [
+                "ch.ubique:uetlib-testapp"
+            ],
+            "replacementNameTemplate": "{{{replace '^ch[.]ubique:' 'ch.ubique.uetlib:' packageName}}}",
+            "replacementVersion": "2.0.0",
+            "automerge": false
+        },
+        {
+            "description": "Target the first public migration release",
+            "matchManagers": [
+                "maven"
+            ],
+            "matchDatasources": [
+                "maven"
+            ],
+            "matchPackageNames": [
+                "ch.ubique:uetlib-bom",
+                "ch.ubique:uetlib-parent"
+            ],
+            "replacementNameTemplate": "{{{replace '^ch[.]ubique:' 'ch.ubique.uetlib:' packageName}}}",
+            "replacementVersion": "2026.11.0",
+            "automerge": false
+        },
+        {
+            "description": "Target the first public migration release",
+            "matchManagers": [
+                "maven"
+            ],
+            "matchDatasources": [
+                "maven"
+            ],
+            "matchPackageNames": [
+                "ch.ubique:uetlib-core",
+                "ch.ubique:uetlib-db",
+                "ch.ubique:uetlib-monitoring",
+                "ch.ubique:uetlib-payment",
+                "ch.ubique:uetlib-payment-coverage",
+                "ch.ubique:uetlib-payment-datatrans",
+                "ch.ubique:uetlib-payment-parent",
+                "ch.ubique:uetlib-payment-postfinance",
+                "ch.ubique:uetlib-spring-boot-test",
+                "ch.ubique:uetlib-spring-cloud",
+                "ch.ubique:uetlib-spring-cloud-coverage",
+                "ch.ubique:uetlib-spring-cloud-parent",
+                "ch.ubique:uetlib-spring-cloud-security",
+                "ch.ubique:uetlib-storage",
+                "ch.ubique:uetlib-storage-spring-boot",
+                "ch.ubique:uetlib-test",
+                "ch.ubique:uetlib-testcontainers",
+                "ch.ubique:uetlib-testcontainers-coverage",
+                "ch.ubique:uetlib-testcontainers-influxdb",
+                "ch.ubique:uetlib-testcontainers-kafka",
+                "ch.ubique:uetlib-testcontainers-mariadb",
+                "ch.ubique:uetlib-testcontainers-mongodb",
+                "ch.ubique:uetlib-testcontainers-mysql",
+                "ch.ubique:uetlib-testcontainers-parent",
+                "ch.ubique:uetlib-testcontainers-postgresql",
+                "ch.ubique:uetlib-testcontainers-redis"
+            ],
+            "replacementNameTemplate": "{{{replace '^ch[.]ubique:' 'ch.ubique.uetlib:' packageName}}}",
+            "replacementVersion": "3.0.0",
+            "automerge": false
+        },
+        {
+            "description": "Target the first public migration release",
+            "matchManagers": [
+                "maven"
+            ],
+            "matchDatasources": [
+                "maven"
+            ],
+            "matchPackageNames": [
+                "ch.ubique:uetlib-geo",
+                "ch.ubique:uetlib-geo-coverage",
+                "ch.ubique:uetlib-geo-db",
+                "ch.ubique:uetlib-geo-job",
+                "ch.ubique:uetlib-geo-parent",
+                "ch.ubique:uetlib-spring-boot",
+                "ch.ubique:uetlib-spring-boot-coverage",
+                "ch.ubique:uetlib-spring-boot-geo",
+                "ch.ubique:uetlib-spring-boot-parent",
+                "ch.ubique:uetlib-spring-boot-security"
+            ],
+            "replacementNameTemplate": "{{{replace '^ch[.]ubique:' 'ch.ubique.uetlib:' packageName}}}",
+            "replacementVersion": "4.0.0",
+            "automerge": false
+        },
+        {
+            "description": "Target the first public migration release",
+            "matchManagers": [
+                "maven"
+            ],
+            "matchDatasources": [
+                "maven"
+            ],
+            "matchPackageNames": [
+                "ch.ubique:uetlib-spring-boot-starter-parent"
+            ],
+            "replacementNameTemplate": "{{{replace '^ch[.]ubique:' 'ch.ubique.uetlib:' packageName}}}",
+            "replacementVersion": "4.1.1-2026.11.0",
+            "automerge": false
+        },
+        {
+            "description": "Target the first public migration release",
+            "matchManagers": [
+                "maven"
+            ],
+            "matchDatasources": [
+                "maven"
+            ],
+            "matchPackageNames": [
+                "ch.ubique:uetlib-job",
+                "ch.ubique:uetlib-self-bom"
+            ],
+            "replacementNameTemplate": "{{{replace '^ch[.]ubique:' 'ch.ubique.uetlib:' packageName}}}",
+            "replacementVersion": "6.0.0",
+            "automerge": false
         },
         {
             "matchDatasources": [
