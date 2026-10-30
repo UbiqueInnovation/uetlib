@@ -61,6 +61,36 @@ class BundleTest(unittest.TestCase):
                 for algorithm in ('md5', 'sha1', 'sha256', 'sha512'):
                     self.assertEqual(bundle.read(name + '.' + algorithm).decode(), hashlib.new(algorithm, file.read_bytes()).hexdigest())
 
+    def test_licenses_are_embedded_in_each_jar_without_overwriting_other_notices(self):
+        directory = self.artifact()
+        legal = self.root / 'legal'
+        legal.mkdir()
+        (legal / 'LICENSE').write_text('Apache-2.0 test license')
+        (legal / 'NOTICE').write_text('Copyright test')
+        (legal / 'LICENSES').mkdir()
+        (legal / 'LICENSES/MIT.txt').write_text('Third-party test license')
+        main = directory / 'uetlib-example-1.0.0.jar'
+        with zipfile.ZipFile(main, 'a') as jar:
+            jar.writestr('META-INF/LICENSE', 'Existing third-party license')
+        target = self.root / 'bundle.zip'
+        BUNDLE['build_bundle'](self.staging, '1.0.0', target, lambda file: b'signature', license_root=legal)
+        with zipfile.ZipFile(target) as archive:
+            for name in archive.namelist():
+                if not name.endswith('.jar'):
+                    continue
+                with zipfile.ZipFile(io.BytesIO(archive.read(name))) as jar:
+                    self.assertEqual(jar.read('META-INF/uetlib/LICENSE'), b'Apache-2.0 test license')
+                    self.assertEqual(jar.read('META-INF/uetlib/LICENSES/MIT.txt'), b'Third-party test license')
+        with zipfile.ZipFile(main) as jar:
+            self.assertEqual(jar.read('META-INF/LICENSE'), b'Existing third-party license')
+
+    def test_missing_license_prevents_signing(self):
+        self.artifact()
+        calls = []
+        with self.assertRaisesRegex(ValueError, 'LICENSE'):
+            BUNDLE['build_bundle'](self.staging, '1.0.0', self.root / 'bundle.zip', lambda file: calls.append(file), license_root=self.root)
+        self.assertEqual(calls, [])
+
     def test_parent_poms_publish_without_source_or_javadoc_jars(self):
         self.artifact(packaging='pom')
         self.assertEqual(len(BUNDLE['collect_artifacts'](self.staging, '1.0.0')), 1)

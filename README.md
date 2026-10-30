@@ -2,7 +2,7 @@
 
 Create Issues for all uetlib repos here.
 
-See [shared Maven workflows](WORKFLOWS.md) for build/test and explicit Maven Central publishing.
+See [shared Maven workflows](WORKFLOWS.md) for build/test and explicit Maven Central publishing, [contribution guidance](CONTRIBUTING.md), [security reporting](SECURITY.md), and the [public release checklist](RELEASE_CHECKLIST.md).
 
 ## Current uetlib repos with their artifacts
 
@@ -99,3 +99,7 @@ See [shared Maven workflows](WORKFLOWS.md) for build/test and explicit Maven Cen
 ### [uetlib-rewrite](https://github.com/UbiqueInnovation/uetlib-rewrite)
 
 - uetlib-rewrite: versioned OpenRewrite migration recipes
+
+## License
+
+Except where otherwise noted, original uetlib code is licensed under the [Apache License 2.0](LICENSE). Third-party files retain their original license terms; see [NOTICE](NOTICE) and any third-party notices in this repository.
