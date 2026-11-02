@@ -9,9 +9,16 @@ on:
       java-version:
         type: string
         default: "25"
-      maven-version:
+      system-packages:
         type: string
-        default: 3.9.11 # renovate: maven-version
+        default: ""
+        description: Space-separated Ubuntu packages installed before Maven, e.g. native runtime libraries.
+      native-artifacts:
+        type: string
+        default: ""
+        description: >-
+          Space-separated artifact names uploaded by earlier jobs of the calling run. Each is required
+          and its contents are merged into src/main/resources/native before Maven runs.
 permissions:
   contents: read
 jobs:
@@ -28,36 +35,48 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+      - name: Install system packages
+        if: ${{ inputs.system-packages != '' }}
+        env:
+          PACKAGES: ${{ inputs.system-packages }}
+        run: |
+          read -ra packages <<< "$PACKAGES"
+          for package in "${packages[@]}"; do
+            if [[ ! "$package" =~ ^[a-z0-9][a-z0-9.+-]*$ ]]; then
+              echo "::error::Invalid package name: $package"
+              exit 1
+            fi
+          done
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends "${packages[@]}"
+      - name: Download native artifacts
+        if: ${{ inputs.native-artifacts != '' }}
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          path: ${{ runner.temp }}/native-artifacts
+      - name: Stage native artifacts
+        if: ${{ inputs.native-artifacts != '' }}
+        env:
+          ARTIFACTS: ${{ inputs.native-artifacts }}
+        run: |
+          read -ra artifacts <<< "$ARTIFACTS"
+          mkdir -p src/main/resources/native
+          for artifact in "${artifacts[@]}"; do
+            source="$RUNNER_TEMP/native-artifacts/$artifact"
+            if [[ ! "$artifact" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ || -z "$(ls -A "$source" 2>/dev/null)" ]]; then
+              echo "::error::Native artifact $artifact is missing or empty"
+              exit 1
+            fi
+            cp -R "$source/." src/main/resources/native/
+          done
+          find src/main/resources/native -type f
       - name: Set up Java
-        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
         with:
           distribution: temurin
           java-version: ${{ inputs.java-version }}
           cache: maven
           cache-dependency-path: "**/pom.xml"
-      - name: Set up Maven
-        env:
-          MAVEN_VERSION: ${{ inputs.maven-version }}
-        run: |
-          set -euo pipefail
-          [[ "$MAVEN_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || exit 1
-          archive="$RUNNER_TEMP/apache-maven-$MAVEN_VERSION-bin.tar.gz"
-          url="https://repo.maven.apache.org/maven2/org/apache/maven/apache-maven/$MAVEN_VERSION/apache-maven-$MAVEN_VERSION-bin.tar.gz"
-          curl --fail --silent --show-error --location "$url" -o "$archive"
-          checksum="$(curl --fail --silent --show-error --location "$url.sha512")"
-          python3 -c 'import hashlib, pathlib, sys; sys.exit(0 if hashlib.sha512(pathlib.Path(sys.argv[1]).read_bytes()).hexdigest() == sys.argv[2] else "Maven SHA-512 mismatch")' "$archive" "$checksum"
-          tar -xzf "$archive" -C "$RUNNER_TEMP"
-          echo "$RUNNER_TEMP/apache-maven-$MAVEN_VERSION/bin" >> "$GITHUB_PATH"
-      - name: Validate POM path
-        env:
-          POM: ${{ inputs.pom }}
-        shell: python
-        run: |
-          from pathlib import Path
-          import os
-          pom = Path(os.environ["POM"]).resolve()
-          if not pom.is_relative_to(Path.cwd()) or not pom.is_file():
-              raise SystemExit("pom must be an existing file inside the checkout")
       - name: Build, test and install
         env:
           POM: ${{ inputs.pom }}

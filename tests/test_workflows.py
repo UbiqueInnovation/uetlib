@@ -1,12 +1,10 @@
-import hashlib
-import io
-import os
+import json
 from pathlib import Path
+import os
 import subprocess
 import tempfile
+import tempfile
 import unittest
-from unittest.mock import patch
-import zipfile
 
 import yaml
 
@@ -17,175 +15,65 @@ def workflow(name):
     return yaml.safe_load((ROOT / '.github/workflows' / name).read_text())
 
 
-def step_code(name):
-    steps = workflow('mvn-publish.yml')['jobs']['publish']['steps']
-    return next(step['run'] for step in steps if step['name'] == name)
-
-
-BUNDLE = {'__name__': 'test_bundle'}
-exec(compile(step_code('Validate, sign and bundle'), 'bundle-step', 'exec'), BUNDLE)
-
-
-class BundleTest(unittest.TestCase):
-    def setUp(self):
-        self.temp = tempfile.TemporaryDirectory()
-        self.addCleanup(self.temp.cleanup)
-        self.root = Path(self.temp.name)
-        self.staging = self.root / 'staging'
-        self.staging.mkdir()
-
-    def artifact(self, name='uetlib-example', group='ch.ubique.uetlib', version='1.0.0', packaging='jar', attachments=True, recipes=False):
-        directory = self.staging / Path(*group.split('.')) / name / version
-        directory.mkdir(parents=True)
-        prefix = name + '-' + version
-        pom = directory / (prefix + '.pom')
-        pom.write_text(f'<project xmlns="http://maven.apache.org/POM/4.0.0"><modelVersion>4.0.0</modelVersion><groupId>{group}</groupId><artifactId>{name}</artifactId><version>{version}</version><packaging>{packaging}</packaging></project>')
-        if packaging == 'jar':
-            for suffix in ('.jar', '-sources.jar', '-javadoc.jar') if attachments else ('.jar',):
-                with zipfile.ZipFile(directory / (prefix + suffix), 'w') as jar:
-                    jar.writestr('META-INF/rewrite/example.yml' if recipes else 'Example.class', 'recipe' if recipes else 'bytecode')
-        return directory
-
-    def test_bundle_contains_signatures_and_correct_checksums_but_no_metadata(self):
-        directory = self.artifact()
-        (directory / 'maven-metadata.xml').write_text('not a release artifact')
-        (directory / 'uetlib-example-1.0.0.jar.sha1').write_text('stale')
-        target = self.root / 'bundle.zip'
-        count = BUNDLE['build_bundle'](self.staging, '1.0.0', target, lambda file: b'signature')
-        self.assertEqual(count, 4)
-        with zipfile.ZipFile(target) as bundle:
-            self.assertFalse(any('metadata' in name for name in bundle.namelist()))
-            for file in BUNDLE['collect_artifacts'](self.staging, '1.0.0'):
-                name = file.relative_to(self.staging).as_posix()
-                self.assertEqual(bundle.read(name + '.asc'), b'signature')
-                for algorithm in ('md5', 'sha1', 'sha256', 'sha512'):
-                    self.assertEqual(bundle.read(name + '.' + algorithm).decode(), hashlib.new(algorithm, file.read_bytes()).hexdigest())
-
-    def test_licenses_are_embedded_in_each_jar_without_overwriting_other_notices(self):
-        directory = self.artifact()
-        legal = self.root / 'legal'
-        legal.mkdir()
-        (legal / 'LICENSE').write_text('Apache-2.0 test license')
-        (legal / 'NOTICE').write_text('Copyright test')
-        (legal / 'LICENSES').mkdir()
-        (legal / 'LICENSES/MIT.txt').write_text('Third-party test license')
-        main = directory / 'uetlib-example-1.0.0.jar'
-        with zipfile.ZipFile(main, 'a') as jar:
-            jar.writestr('META-INF/LICENSE', 'Existing third-party license')
-        target = self.root / 'bundle.zip'
-        BUNDLE['build_bundle'](self.staging, '1.0.0', target, lambda file: b'signature', license_root=legal)
-        with zipfile.ZipFile(target) as archive:
-            for name in archive.namelist():
-                if not name.endswith('.jar'):
-                    continue
-                with zipfile.ZipFile(io.BytesIO(archive.read(name))) as jar:
-                    self.assertEqual(jar.read('META-INF/uetlib/LICENSE'), b'Apache-2.0 test license')
-                    self.assertEqual(jar.read('META-INF/uetlib/LICENSES/MIT.txt'), b'Third-party test license')
-        with zipfile.ZipFile(main) as jar:
-            self.assertEqual(jar.read('META-INF/LICENSE'), b'Existing third-party license')
-
-    def test_missing_license_prevents_signing(self):
-        self.artifact()
-        calls = []
-        with self.assertRaisesRegex(ValueError, 'LICENSE'):
-            BUNDLE['build_bundle'](self.staging, '1.0.0', self.root / 'bundle.zip', lambda file: calls.append(file), license_root=self.root)
-        self.assertEqual(calls, [])
-
-    def test_parent_poms_publish_without_source_or_javadoc_jars(self):
-        self.artifact(packaging='pom')
-        self.assertEqual(len(BUNDLE['collect_artifacts'](self.staging, '1.0.0')), 1)
-
-    def test_coverage_and_testapp_artifacts_are_excluded(self):
-        self.artifact(packaging='pom')
-        self.artifact(name='uetlib-example-coverage', attachments=False)
-        self.artifact(name='uetlib-testapp', attachments=False)
-        self.assertEqual(len(BUNDLE['collect_artifacts'](self.staging, '1.0.0')), 1)
-
-    def test_private_coordinates_fail_before_signing(self):
-        self.artifact()
-        self.artifact(name='private-app', group='ch.ubique.private')
-        signed = []
-        with self.assertRaises(ValueError):
-            BUNDLE['build_bundle'](self.staging, '1.0.0', self.root / 'bundle.zip', lambda path: signed.append(path))
-        self.assertEqual(signed, [])
-
-    def test_missing_java_documentation_fails(self):
-        self.artifact(attachments=False)
-        with self.assertRaisesRegex(ValueError, 'required artifact'):
-            BUNDLE['collect_artifacts'](self.staging, '1.0.0')
-
-    def test_resource_only_recipes_get_sources_and_documentation_jars(self):
-        directory = self.artifact(attachments=False, recipes=True)
-        self.assertEqual(len(BUNDLE['collect_artifacts'](self.staging, '1.0.0')), 4)
-        with zipfile.ZipFile(directory / 'uetlib-example-1.0.0-sources.jar') as jar:
-            self.assertEqual(jar.read('META-INF/rewrite/example.yml'), b'recipe')
-        with zipfile.ZipFile(directory / 'uetlib-example-1.0.0-javadoc.jar') as jar:
-            self.assertIn('no Java API', jar.read('README.txt').decode())
-
-    def test_wrong_versions_and_empty_staging_fail(self):
-        with self.assertRaises(ValueError):
-            BUNDLE['collect_artifacts'](self.staging, '1.0.0')
-        self.artifact(version='1.0.1')
-        with self.assertRaises(ValueError):
-            BUNDLE['collect_artifacts'](self.staging, '1.0.0')
-
-    def test_symlink_artifacts_are_rejected(self):
-        directory = self.artifact()
-        jar = directory / 'uetlib-example-1.0.0.jar'
-        external = self.root / 'external.jar'
-        jar.rename(external)
-        jar.symlink_to(external)
-        with self.assertRaises(ValueError):
-            BUNDLE['collect_artifacts'](self.staging, '1.0.0')
-
-
 class ReleaseValidationTest(unittest.TestCase):
-    def validate(self, ref='refs/tags/v1.0.0', repo='UbiqueInnovation/uetlib-example', group='ch.ubique.uetlib', reachable=True):
+    def validate(self, ref='refs/tags/v1.0.0', changelog='AUTO'):
+        steps = workflow('mvn-publish.yml')['jobs']['validate']['steps']
+        script = next(s['with']['script'] for s in steps if s.get('id') == 'release')
+        harness = """
+          const script = require('fs').readFileSync(0, 'utf8');
+          const outputs = {};
+          new Function('context', 'core', 'require', script)(
+            {ref: process.argv[1]}, {setOutput: (key, value) => outputs[key] = value}, require);
+          console.log(JSON.stringify(outputs));
+        """
         with tempfile.TemporaryDirectory() as temp:
-            directory = Path(temp)
-            (directory / 'pom.xml').write_text(f'<project xmlns="http://maven.apache.org/POM/4.0.0"><groupId>{group}</groupId><artifactId>uetlib-example</artifactId></project>')
-            env = {'POM': 'pom.xml', 'RELEASE_REF': ref, 'REPOSITORY': repo, 'DEFAULT_BRANCH': 'main', 'GITHUB_OUTPUT': str(directory / 'output')}
-            code = workflow('mvn-publish.yml')['jobs']['validate']['steps'][1]['run']
-            previous = Path.cwd()
-            try:
-                os.chdir(directory)
-                with patch.dict(os.environ, env), patch('subprocess.check_output', return_value='refs/remotes/origin/main\n'), patch('subprocess.run', return_value=subprocess.CompletedProcess([], 0 if reachable else 1)):
-                    exec(compile(code, 'validate-step', 'exec'), {})
-                return (directory / 'output').read_text()
-            finally:
-                os.chdir(previous)
+            if changelog == 'AUTO':
+                changelog = '## ' + ref.removeprefix('refs/tags/v') + '\n\n- Release changes.\n'
+            if changelog is not None:
+                (Path(temp) / 'CHANGELOG.md').write_text(changelog)
+            result = subprocess.run(['node', '-e', harness, ref], input=script, cwd=temp,
+                                    text=True, capture_output=True)
+        if result.returncode:
+            raise ValueError(result.stderr)
+        return json.loads(result.stdout)
 
-    def test_semver_and_composite_release_tags(self):
-        self.assertEqual(self.validate(), 'version=1.0.0\n')
-        self.assertEqual(self.validate(ref='refs/tags/v4.1.1-2026.11.0'), 'version=4.1.1-2026.11.0\n')
+    def test_semver_calendar_prerelease_and_composite_tags(self):
+        for version in ('1.0.0', '2026.11.0', '3.0.0-alpha.1', '4.1.1-2026.11.0'):
+            with self.subTest(version=version):
+                self.assertEqual(self.validate('refs/tags/v' + version)['version'], version)
 
-    def test_non_tag_snapshot_foreign_repository_and_private_group_are_rejected(self):
-        for arguments in ({'ref': 'refs/heads/main'}, {'ref': 'refs/tags/v1.0.0-SNAPSHOT'}, {'repo': 'UbiqueInnovation/private-app'}, {'repo': 'another-org/uetlib-example'}, {'repo': 'UbiqueInnovation/uetlib-testapp'}, {'group': 'ch.ubique.private'}, {'reachable': False}):
-            with self.subTest(arguments=arguments), self.assertRaises(SystemExit):
-                self.validate(**arguments)
+    def test_branches_snapshots_and_malformed_tags_are_rejected(self):
+        for ref in ('refs/heads/main', 'refs/tags/1.0.0', 'refs/tags/v1.0.0-SNAPSHOT',
+                    'refs/tags/v1.0.0-snapshot', 'refs/tags/v', 'refs/tags/v1.2', 'refs/tags/vbad'):
+            with self.subTest(ref=ref), self.assertRaises(ValueError):
+                self.validate(ref)
 
+    def test_stable_releases_require_an_exact_version_heading_and_entry(self):
+        for changelog in (None, '# Changelog\n', '## 1.0.01\n- Other version.\n',
+                          'Mention 1.0.0 in prose.\n', '## 1.0.0\n\n## 0.9.0\n- Older changes.\n',
+                          '## 1.0.0\n### Changes\n'):
+            with self.subTest(changelog=changelog), self.assertRaises(ValueError):
+                self.validate(changelog=changelog)
 
-class CentralUploadTest(unittest.TestCase):
-    def run_upload(self, states):
-        deployment = '12345678-1234-1234-1234-123456789abc'
-        with tempfile.TemporaryDirectory() as temp:
-            env = {'CENTRAL_USERNAME': 'test-user', 'CENTRAL_PASSWORD': 'test-password', 'BUNDLE': temp + '/bundle.zip', 'GITHUB_STEP_SUMMARY': temp + '/summary'}
-            responses = [io.BytesIO(__import__('json').dumps({'deploymentState': state}).encode()) for state in states]
-            code = step_code('Upload and await publication')
-            with patch.dict(os.environ, env), patch('subprocess.run', return_value=subprocess.CompletedProcess([], 0, deployment, '')) as upload, patch('urllib.request.urlopen', side_effect=responses), patch('time.sleep'), patch('sys.stdout', new_callable=io.StringIO):
-                exec(compile(code, 'upload-step', 'exec'), {})
-            command = upload.call_args.args[0]
-            self.assertIn('publishingType=AUTOMATIC', command[-1])
-            self.assertNotIn('test-password', ' '.join(command))
-            self.assertIn('Authorization: Bearer ', upload.call_args.kwargs['input'])
-            self.assertIn(deployment, Path(temp + '/summary').read_text())
+    def test_common_changelog_headings_and_nested_sections(self):
+        for heading in ('# 1.0.0', '## [1.0.0] - 2026-11-02', '## v1.0.0',
+                        '## [v1.0.0]', '## 1.0.0 (unreleased)'):
+            with self.subTest(heading=heading):
+                result = self.validate(changelog=heading + '\r\n\r\n### Fixes\r\n- A fix.\r\n')
+                self.assertEqual(result['prerelease'], 'false')
 
-    def test_upload_waits_until_published(self):
-        self.run_upload(['VALIDATING', 'PUBLISHING', 'PUBLISHED'])
+    def test_prereleases_do_not_need_a_changelog(self):
+        for version in ('1.0.0-alpha.1', '1.0.0-rc.2', '1.0.0-1'):
+            with self.subTest(version=version):
+                result = self.validate('refs/tags/v' + version, changelog=None)
+                self.assertEqual(result['prerelease'], 'true')
 
-    def test_failed_validation_does_not_succeed(self):
-        with self.assertRaisesRegex(SystemExit, 'Central validation failed'):
-            self.run_upload(['FAILED'])
+    def test_calendar_and_starter_parent_releases_require_changelogs(self):
+        for version in ('2026.11.0', '4.1.1-2026.11.0'):
+            with self.subTest(version=version):
+                with self.assertRaises(ValueError):
+                    self.validate('refs/tags/v' + version, changelog=None)
+                self.assertEqual(self.validate('refs/tags/v' + version)['prerelease'], 'false')
 
 
 class WorkflowConfigurationTest(unittest.TestCase):
@@ -201,17 +89,108 @@ class WorkflowConfigurationTest(unittest.TestCase):
                     if step.get('shell') == 'python':
                         compile(step['run'], name, 'exec')
 
-    def test_secrets_are_only_used_after_environment_gate_and_after_maven_build(self):
+    def test_setup_java_configures_the_same_credentials_used_by_maven(self):
+        config = workflow('mvn-publish.yml')
+        publish = config['jobs']['publish']
+        setup = next(s for s in publish['steps'] if s['name'] == 'Set up Java')['with']
+        deploy = next(s for s in publish['steps'] if s['name'] == 'Publish to Maven Central')
+        self.assertEqual(setup['server-id'], 'central')
+        for setting in ('server-username-env-var', 'server-password-env-var', 'gpg-passphrase-env-var'):
+            self.assertIn(setup[setting], deploy['env'])
+        self.assertEqual(setup['gpg-private-key'], '${{ secrets.MAVEN_SIGNING_KEY_ARMOR_ASC }}')
+        self.assertEqual(deploy['env']['MAVEN_GPG_PASSPHRASE'], '${{ secrets.MAVEN_SIGNING_KEY_PASSPHRASE }}')
+        self.assertIn('-Pcentral-release clean deploy', deploy['run'])
+        self.assertNotIn('gpg.skip', deploy['run'])
+
+    def test_credentials_are_environment_gated_and_only_four_secrets_are_required(self):
         config = workflow('mvn-publish.yml')
         self.assertNotIn('secrets.', str(config['jobs']['validate']))
         publish = config['jobs']['publish']
         self.assertEqual(publish['needs'], 'validate')
         self.assertEqual(publish['environment'], '${{ inputs.environment }}')
-        build = next(s for s in publish['steps'] if s['name'] == 'Build, test and stage artifacts')
-        self.assertNotIn('secrets.', str(build))
-        self.assertIn('file://$STAGING', build['run'])
-        self.assertNotIn('maven-source-plugin', build['run'])
-        self.assertIn('clean install', build['run'])
+        call = config.get('on', config.get(True))['workflow_call']
+        self.assertEqual(set(call['secrets']), {
+            'MAVEN_SIGNING_KEY_ARMOR_ASC', 'MAVEN_SIGNING_KEY_PASSPHRASE',
+            'MAVEN_CENTRAL_USERNAME', 'MAVEN_CENTRAL_PASSWORD'})
+        self.assertNotIn('MAVEN_SIGNING_KEY_ID', str(config))
+
+    def test_github_release_is_created_only_after_maven_publication(self):
+        steps = workflow('mvn-publish.yml')['jobs']['publish']['steps']
+        names = [s['name'] for s in steps]
+        self.assertLess(names.index('Publish to Maven Central'), names.index('Create GitHub release'))
+        release = next(s for s in steps if s['name'] == 'Create GitHub release')
+        self.assertEqual(release['if'], '${{ inputs.create-github-release }}')
+        self.assertNotIn('always()', release['if'])
+        self.assertIn('--verify-tag', release['run'])
+        self.assertEqual(release['env']['PRERELEASE'], '${{ needs.validate.outputs.prerelease }}')
+        self.assertIn('$PRERELEASE', release['run'])
+
+    def test_embedded_shell_scripts_are_valid_bash(self):
+        for name in ('mvn-install.yml', 'mvn-publish.yml'):
+            for job in workflow(name)['jobs'].values():
+                for step in job['steps']:
+                    if 'run' in step and step.get('shell', job.get('defaults', {}).get('run', {}).get('shell')) == 'bash':
+                        result = subprocess.run(['bash', '-n'], input=step['run'], text=True, capture_output=True)
+                        self.assertEqual(result.returncode, 0, result.stderr)
+
+
+class NativeInputsTest(unittest.TestCase):
+    def run_step(self, workflow_name, step_name, env, cwd):
+        for job in workflow(workflow_name)['jobs'].values():
+            for step in job['steps']:
+                if step['name'] == step_name:
+                    return subprocess.run(['bash', '-e', '-c', step['run']], cwd=cwd, text=True,
+                                          capture_output=True, env={**os.environ, **env})
+        raise KeyError(step_name)
+
+    def test_native_artifacts_are_required_and_merged_into_resources(self):
+        for name in ('mvn-install.yml', 'mvn-publish.yml'):
+            with self.subTest(workflow=name), tempfile.TemporaryDirectory() as temp:
+                checkout, downloads = Path(temp, 'checkout'), Path(temp, 'native-artifacts')
+                checkout.mkdir()
+                for artifact, classifier in (('native-a', 'linux-x86_64'), ('native-b', 'macos-aarch64')):
+                    Path(downloads, artifact, classifier).mkdir(parents=True)
+                    Path(downloads, artifact, classifier, 'lib.so').write_text(artifact)
+                Path(downloads, 'native-empty').mkdir()
+
+                def stage(artifacts):
+                    return self.run_step(name, 'Stage native artifacts',
+                                         {'RUNNER_TEMP': temp, 'ARTIFACTS': artifacts}, checkout)
+
+                result = stage('native-a native-b')
+                self.assertEqual(result.returncode, 0, result.stderr)
+                resources = checkout / 'src/main/resources/native'
+                self.assertEqual((resources / 'linux-x86_64/lib.so').read_text(), 'native-a')
+                self.assertEqual((resources / 'macos-aarch64/lib.so').read_text(), 'native-b')
+                for artifacts in ('native-a native-missing', 'native-empty', '..', 'native-a/../native-b'):
+                    with self.subTest(artifacts=artifacts):
+                        self.assertNotEqual(stage(artifacts).returncode, 0)
+
+    def test_system_package_names_are_validated(self):
+        for name in ('mvn-install.yml', 'mvn-publish.yml'):
+            with self.subTest(workflow=name), tempfile.TemporaryDirectory() as temp:
+                log = Path(temp, 'sudo.log')
+                Path(temp, 'sudo').write_text(f'#!/bin/sh\necho "$@" >> {log}\n')
+                Path(temp, 'sudo').chmod(0o755)
+                env = {'PATH': temp + os.pathsep + os.environ['PATH']}
+
+                result = self.run_step(name, 'Install system packages',
+                                       {**env, 'PACKAGES': 'libwebp7 libpng16-16 g++'}, temp)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertIn('install -y --no-install-recommends libwebp7 libpng16-16 g++', log.read_text())
+                for packages in ('-o=evil', 'pkg;id', 'Upper'):
+                    with self.subTest(packages=packages):
+                        log.unlink(missing_ok=True)
+                        result = self.run_step(name, 'Install system packages', {**env, 'PACKAGES': packages}, temp)
+                        self.assertNotEqual(result.returncode, 0)
+                        self.assertFalse(log.exists())
+
+    def test_native_inputs_run_before_maven(self):
+        for name, job in (('mvn-install.yml', 'build'), ('mvn-publish.yml', 'publish')):
+            with self.subTest(workflow=name):
+                names = [s['name'] for s in workflow(name)['jobs'][job]['steps']]
+                self.assertLess(names.index('Stage native artifacts'), names.index('Set up Java'))
+                self.assertLess(names.index('Install system packages'), names.index('Set up Java'))
 
 
 if __name__ == '__main__':
