@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Simplify Central publication to `setup-java` and an opt-in Maven release profile; use runner-provided Maven and the four existing signing/token secret names. Stable releases require a matching CHANGELOG.md entry. Optional `native-artifacts` and `system-packages` inputs stage prebuilt native libraries and their runtime packages.
+
 - Add Apache-2.0 licensing, shared contribution/security guidance and Maven publication metadata across the repositories.
 - Move Java packages to `ch.ubique.uetlib`, provide a combined OpenRewrite migration, and document its command in the major-release changelogs.
 
