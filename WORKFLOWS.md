@@ -1,8 +1,8 @@
 # Shared Maven workflows
 
-The reusable workflows live in this repository. Neither workflow adds Maven Central plugins or publishing configuration to the shared parent POMs.
+The reusable workflows live in this repository. Publishing uses the opt-in `central-release` Maven profile; normal builds and consumers do not activate it.
 
-Both accept `pom` (default `pom.xml`), `java-version` (default `25`) and `maven-version` (default `3.9.11`). Maven is downloaded from Central and its SHA-512 checksum is checked. Java 17 projects such as uetlib-rewrite must override `java-version`.
+Both accept `pom` (default `pom.xml`) and `java-version` (default `25`) and use Maven already installed on the GitHub runner. Java 17 projects such as uetlib-rewrite must override `java-version`.
 
 ## Build and test
 
@@ -38,34 +38,49 @@ jobs:
     secrets: inherit
 ```
 
-Replace the placeholder SHA and example tag comment with an actual released workflow revision. Callers can override `java-version`, `pom`, `maven-version`, `environment` (default `maven-central`) and `create-github-release` (default `true`). They cannot supply arbitrary Maven arguments or a different upload endpoint.
+Replace the placeholder SHA and example tag comment with an actual released workflow revision. Callers can override `java-version`, `pom`, `environment` (default `maven-central`) and `create-github-release` (default `true`). They cannot supply arbitrary Maven arguments or a different upload endpoint.
 
-Publishing accepts release tags such as `v3.0.0`, `v3.0.0-alpha.1` and `v4.1.1-2026.11.0`. The commit must be on the default branch or a `release/` branch. Only `UbiqueInnovation/uetlib-*` library repositories with `ch.ubique.uetlib` Maven coordinates are accepted; the test application and coverage artifacts are excluded.
+## Native libraries
 
-The release job waits for its GitHub environment approval, sets reactor versions from the tag, builds/tests, attaches sources and Javadoc, and stages artifacts in a local `central-staging` directory. The stage uses a file repository override, so inherited Artifactory deployment settings do not send anything to Artifactory. No Central publishing plugin is installed in the POM or inherited by private consumers.
+Both workflows accept two optional inputs for libraries that package native code:
 
-Before upload, the workflow validates coordinates, Maven paths and required JARs, embeds the checkout's LICENSE, NOTICE and third-party license files under META-INF/uetlib in every published JAR (including sources/Javadoc), signs each POM/JAR, verifies each signature, and generates checksums. Existing third-party archive notices are preserved. A missing root LICENSE stops publication. Parent/BOM POM artifacts need no source or Javadoc JAR. Resource-only OpenRewrite recipe JARs get a documentation JAR pointing to their source and usage, and recipe sources if the source plugin did not attach them. Ordinary Java libraries fail if source or Javadoc JARs are missing.
+- `native-artifacts`: space-separated names of artifacts uploaded by earlier jobs in the same caller run. Every listed artifact must exist and be non-empty; its contents are merged into `src/main/resources/native/` before Maven runs. The calling job must `need` the jobs that produce them.
+- `system-packages`: space-separated Ubuntu package names installed before Maven, e.g. runtime libraries loaded by native tests.
 
-The bundle is uploaded through the Central Publisher API with automatic publication. The workflow waits for `PUBLISHED` and only then creates the GitHub release. Signing material is kept in a temporary GnuPG home and removed after signing. The staging repository and ZIP are removed even when a later step fails. After a publication timeout, inspect the deployment ID in the job summary before retrying: Maven Central versions cannot be overwritten.
+uetlib-webp builds each platform library in its own caller matrix job, uploads it as `native-<classifier>` containing `<classifier>/libuetlib_webp_native.*`, and passes all three names, so neither its build nor a release can produce a JAR without a platform library. uetlib-inotify-java is Linux-only and builds its JNI library inside the Maven lifecycle, so it needs neither input. Its release remains LGPL-3.0-or-later.
+
+Publishing accepts release tags such as `v3.0.0`, `v3.0.0-alpha.1` and `v4.1.1-2026.11.0`, and rejects snapshots. `actions/github-script` validates the tag and supplies the published version. Stable releases require a non-empty section in the checked-out `CHANGELOG.md` with an exact version heading (for example `## 3.0.0`, `## [3.0.0]` or `## v3.0.0`); prereleases do not. Calendar versions and numeric starter-parent suffixes such as `4.1.1-2026.11.0` count as stable. The same classification controls the GitHub release prerelease flag. Repository names, Maven coordinates and branch ancestry are not restricted by the workflow; Maven and Central validate the artifacts and metadata. Coverage and application exclusions are configured in their POMs.
+
+The release job waits for its GitHub environment approval, uses `actions/setup-java` to configure the `central` Maven server and import the signing key, sets reactor versions from the release tag, then runs:
+
+```sh
+mvn --batch-mode --no-transfer-progress -Pcentral-release clean deploy
+```
+
+The `central-release` profile is defined in `uetlib-parent` and the standalone BOM, starter-parent, rewrite, errorprone and inotify POMs. It uses `maven-gpg-plugin` to sign POMs and artifacts, Maven source/Javadoc plugins for attachments, and Sonatype's official `central-publishing-maven-plugin` to stage, checksum, bundle, upload and wait until publication. Only then does the workflow create the optional GitHub release. There is no custom signing, ZIP manipulation, HTTP client or polling loop.
+
+The profile includes repository license/notice files as ordinary Maven resources under `META-INF/uetlib`. Coverage modules and the test application set `central.publishing.skip=true` and are excluded from signing and publication. The profile is never activated automatically; private consumers retain their ordinary deployment behavior.
+
+For a local rehearsal with a disposable signing key, add `-Dcentral.publishing.skipUpload=true`. This produces the signed Central bundle without uploading it. After a publication timeout, inspect the Central deployment before retrying because release versions cannot be overwritten.
 
 ## Credentials and approvals
 
 Create one set of organization secrets with **Selected repositories** access, restricted to the libraries that publish:
 
-- `CENTRAL_USERNAME`: Central Portal user-token username.
-- `CENTRAL_PASSWORD`: Central Portal user-token password.
-- `MAVEN_SIGNING_KEY`: ASCII-armored private signing key; publish its public key separately.
-- `MAVEN_SIGNING_PASSPHRASE`: signing-key passphrase; empty is allowed for an unencrypted key.
+- `MAVEN_CENTRAL_USERNAME`: Central Portal user-token username.
+- `MAVEN_CENTRAL_PASSWORD`: Central Portal user-token password.
+- `MAVEN_SIGNING_KEY_ARMOR_ASC`: ASCII-armored private signing key; publish its public key separately.
+- `MAVEN_SIGNING_KEY_PASSPHRASE`: signing-key passphrase; empty is allowed for an unencrypted key.
 
 Callers use `secrets: inherit`. The shared workflow reads only these four secrets. An explicit four-secret mapping is also supported if a caller should not inherit other secrets.
 
 In each calling repository, configure the `maven-central` environment with the existing admin team as required reviewer, prevent self-review, and restrict deployment to `v*` tags. The environment gates this workflow's release job. Organization secrets remain available to other workflows in an allowed repository; if credentials themselves must be approval-gated, use environment secrets instead. These environment secrets take precedence over passed secrets with the same names.
 
-The Maven build step receives no signing or Central credentials. Only the signing step receives the key/passphrase, and only the upload step receives the Central token. The workflow does not grant Central access to applications that merely inherit uetlib-parent or starter-parent.
+The publish step exposes the token credentials and `MAVEN_GPG_PASSPHRASE` only inside the environment-gated release job. `setup-java` manages the imported signing key. No `MAVEN_SIGNING_KEY_ID` secret is needed when one signing key is imported.
 
 ## Release prerequisites
 
-Publish prerequisite parents/BOMs/libraries first. Prepare the required POM metadata (name, description, URL, SCM, license and developers), Apache license/third-party notices, working source and Javadoc generation, the verified Central namespace and signing public key. The workflow does not manufacture metadata or publish missing dependencies. Enable immutable GitHub releases in the caller repository.
+Publish prerequisite parents/BOMs/libraries first. Prepare the required POM metadata (name, description, URL, SCM, license and developers), repository license and third-party notices (Apache-2.0; LGPL-3.0-or-later for uetlib-inotify-java), working source and Javadoc generation, the verified Central namespace and signing public key. The workflow does not manufacture metadata or publish missing dependencies. Enable immutable GitHub releases in the caller repository.
 
 ## Validate changes
 
@@ -77,4 +92,4 @@ actionlint
 shellcheck enable-gh-settings.sh
 ```
 
-Tests execute the embedded validation and bundling code directly. They cover Maven parent and JAR artifacts, checksums, excluded modules, resource-only recipes, invalid coordinates, missing documentation and tag/repository restrictions. Public CI runs these tests and workflow linting under the required `Build Project` check.
+Tests execute the release validation and native staging/package scripts directly and check the secret contract, environment gate, action pins, shell syntax and publication/release ordering. Public CI runs these tests and workflow linting under the required `Build Project` check.
