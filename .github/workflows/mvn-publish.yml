@@ -1,4 +1,4 @@
-name: Publish Maven Central release
+name: Publish Maven release
 on:
   workflow_call:
     inputs:
@@ -27,6 +27,14 @@ on:
         type: boolean
         default: true
     secrets:
+      UB_ARTIFACTORY_USER:
+        required: false
+      UB_ARTIFACTORY_PASSWORD:
+        required: false
+      UB_ARTIFACTORY_URL:
+        required: false
+      UB_ARTIFACTORY_REPO_UBIQUE:
+        required: false
       MAVEN_CENTRAL_USERNAME:
         required: false
         description: Central Portal token username. May instead be supplied by the environment.
@@ -156,10 +164,10 @@ jobs:
           java-version: ${{ inputs.java-version }}
           cache: maven
           cache-dependency-path: "**/pom.xml"
-          server-id: central
-          server-username-env-var: MAVEN_CENTRAL_USERNAME
-          server-password-env-var: MAVEN_CENTRAL_PASSWORD
-          gpg-private-key: ${{ secrets.MAVEN_SIGNING_KEY_ARMOR_ASC }}
+          server-id: ${{ needs.validate.outputs.prerelease == 'true' && 'ubique-artifactory-virtual' || 'central' }}
+          server-username-env-var: MAVEN_USERNAME
+          server-password-env-var: MAVEN_PASSWORD
+          gpg-private-key: ${{ needs.validate.outputs.prerelease == 'false' && secrets.MAVEN_SIGNING_KEY_ARMOR_ASC || '' }}
           gpg-passphrase-env-var: MAVEN_GPG_PASSPHRASE
 
       - name: Set release version
@@ -169,11 +177,22 @@ jobs:
         run: |
           mvn --batch-mode --no-transfer-progress -f "$POM" org.codehaus.mojo:versions-maven-plugin:2.21.0:set "-DnewVersion=$VERSION" -DprocessAllModules=true -DgenerateBackupPoms=false
 
-      - name: Publish to Maven Central
+      - name: Publish prerelease to Artifactory
+        if: ${{ needs.validate.outputs.prerelease == 'true' }}
         env:
           POM: ${{ inputs.pom }}
-          MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
-          MAVEN_CENTRAL_PASSWORD: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+          MAVEN_USERNAME: ${{ secrets.UB_ARTIFACTORY_USER }}
+          MAVEN_PASSWORD: ${{ secrets.UB_ARTIFACTORY_PASSWORD }}
+          ARTIFACTORY_URL: ${{ secrets.UB_ARTIFACTORY_URL }}${{ secrets.UB_ARTIFACTORY_REPO_UBIQUE }}
+        run: |
+          mvn --batch-mode --no-transfer-progress -f "$POM" clean deploy "-DaltDeploymentRepository=ubique-artifactory-virtual::$ARTIFACTORY_URL"
+
+      - name: Publish to Maven Central
+        if: ${{ needs.validate.outputs.prerelease == 'false' }}
+        env:
+          POM: ${{ inputs.pom }}
+          MAVEN_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          MAVEN_PASSWORD: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
           MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_SIGNING_KEY_PASSPHRASE }}
         run: |
           mvn --batch-mode --no-transfer-progress -f "$POM" -Pcentral-release clean deploy
