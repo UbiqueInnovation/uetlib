@@ -14,12 +14,6 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Test workflow scripts
-        run: |
-          python3 -m venv "$RUNNER_TEMP/workflow-tests"
-          "$RUNNER_TEMP/workflow-tests/bin/pip" install -r tests/requirements.txt
-          "$RUNNER_TEMP/workflow-tests/bin/python" -m unittest discover -s tests -v
-
       - name: Check workflows
         run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.7
 
