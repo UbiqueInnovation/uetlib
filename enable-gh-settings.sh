@@ -9,6 +9,7 @@ set -euo pipefail
 #  5) Require approval for fork PR workflows from all external contributors
 #  6) Sync "protect main/release" from UbiqueInnovation/uetlib-core
 #  7) Protect v* tags from updates and deletion (writers can still create tags)
+#  8) Enable signed-commit enforcement and require the DCO App check on main/release
 #
 # For every repo directory under ROOT_DIR (default: current directory).
 #
@@ -227,6 +228,31 @@ branch_ruleset="$(gh api "repos/UbiqueInnovation/uetlib-core/rulesets/$reference
   err "Cannot read the reference branch ruleset."
   exit 1
 }
+
+# Keep contributor requirements separate from the copied baseline; no admin bypass.
+# Live enforcement is temporarily paused; rerun this script when ready to merge.
+contribution_ruleset="$(ruleset_payload <<'JSON'
+{
+  "name": "signed commits",
+  "target": "branch",
+  "enforcement": "active",
+  "conditions": {"ref_name": {"include": ["~DEFAULT_BRANCH", "refs/heads/release/**/*"], "exclude": []}},
+  "rules": [
+    {"type": "required_signatures"}
+  ],
+  "bypass_actors": []
+}
+JSON
+)"
+
+# The DCO app must be installed before GitHub accepts its integration ID.
+dco_ruleset="$(printf '%s' "$contribution_ruleset" | jq -cS '
+  .name = "DCO sign-off" | .enforcement = "active" |
+  .rules = [{type: "required_status_checks", parameters: {
+    strict_required_status_checks_policy: false,
+    do_not_enforce_on_create: false,
+    required_status_checks: [{context: "DCO", integration_id: 1861}]
+  }}]')"
 
 # Tag creation remains unrestricted; do not add creation restrictions or bypass actors.
 tag_ruleset="$(ruleset_payload <<'JSON'
@@ -559,6 +585,17 @@ for d in "$ROOT_DIR"/*/; do
     failed_ops=$((failed_ops + 1))
     other_errors+=("$owner_repo (protect main/release): sync failed; see output above")
     note "  - protect main/release: FAILED"
+  fi
+
+  # --- 8) Enable signature enforcement and require DCO sign-offs ---
+  if ! sync_ruleset "$owner_repo" "$contribution_ruleset"; then
+    failed_ops=$((failed_ops + 1))
+    other_errors+=("$owner_repo (signed commits ruleset)")
+  fi
+
+  if ! sync_ruleset "$owner_repo" "$dco_ruleset"; then
+    failed_ops=$((failed_ops + 1))
+    other_errors+=("$owner_repo (DCO ruleset; install https://github.com/apps/dco first)")
   fi
 
   # --- 7) Protect release tags without restricting their creation ---
