@@ -66,7 +66,7 @@ The release job waits for its GitHub environment approval, uses `actions/setup-j
 mvn --batch-mode --no-transfer-progress -Pcentral-release clean deploy
 ```
 
-The `central-release` profile is defined in `uetlib-parent` and the standalone BOM, starter-parent, rewrite, errorprone and inotify POMs. It uses `maven-gpg-plugin` to sign POMs and artifacts, Maven source/Javadoc plugins for attachments, and Sonatype's official `central-publishing-maven-plugin` to stage, checksum, bundle, upload and wait until publication. Only then does the workflow create the optional GitHub release. There is no custom signing, ZIP manipulation, HTTP client or polling loop.
+The `central-release` profile is defined in `uetlib-parent` and the standalone BOM, self-bom, starter-parent, rewrite and errorprone POMs. It uses `maven-gpg-plugin` to sign POMs and artifacts, Maven source/Javadoc plugins for attachments, and Sonatype's official `central-publishing-maven-plugin` to stage, checksum, bundle, upload and wait until validation succeeds. Central then finishes publication asynchronously; the workflow creates the optional GitHub release after validation, so artifacts may not yet be available for download. There is no custom signing, ZIP manipulation, HTTP client or polling loop.
 
 The profile includes repository license/notice files as ordinary Maven resources under `META-INF/uetlib`. Coverage modules and the test application set `central.publishing.skip=true` and are excluded from signing and publication. The profile is never activated automatically; private consumers retain their ordinary deployment behavior.
 
