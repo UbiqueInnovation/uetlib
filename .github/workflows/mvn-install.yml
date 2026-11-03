@@ -9,6 +9,10 @@ on:
       java-version:
         type: string
         default: "25"
+      sonar:
+        type: boolean
+        default: false
+        description: Run SonarCloud analysis after the build and tests.
       system-packages:
         type: string
         default: ""
@@ -19,6 +23,9 @@ on:
         description: >-
           Space-separated artifact names uploaded by earlier jobs of the calling run. Each is required
           and its contents are merged into src/main/resources/native before Maven runs.
+    secrets:
+      SONAR_TOKEN:
+        required: false
 permissions:
   contents: read
 jobs:
@@ -82,3 +89,19 @@ jobs:
           POM: ${{ inputs.pom }}
         run: |
           mvn --batch-mode --no-transfer-progress -f "$POM" clean install
+      - name: Cache SonarCloud packages
+        if: ${{ inputs.sonar }}
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.sonar/cache
+          key: ${{ runner.os }}-sonar
+          restore-keys: ${{ runner.os }}-sonar
+      - name: Run SonarCloud analysis
+        if: ${{ inputs.sonar }}
+        env:
+          POM: ${{ inputs.pom }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
+          BRANCH_NAME: ${{ github.ref_name }}
+        run: |
+          mvn --batch-mode --no-transfer-progress -f "$POM" org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
