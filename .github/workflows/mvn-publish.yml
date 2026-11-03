@@ -110,6 +110,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+
       - name: Install system packages
         if: ${{ inputs.system-packages != '' }}
         env:
@@ -124,11 +125,13 @@ jobs:
           done
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends "${package_names[@]}"
+
       - name: Download native artifacts
         if: ${{ inputs.native-artifacts != '' }}
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           path: ${{ runner.temp }}/native-artifacts
+
       - name: Stage native artifacts
         if: ${{ inputs.native-artifacts != '' }}
         env:
@@ -145,6 +148,7 @@ jobs:
             cp -R "$source/." src/main/resources/native/
           done
           find src/main/resources/native -type f
+
       - name: Set up Java
         uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
         with:
@@ -157,12 +161,14 @@ jobs:
           server-password-env-var: MAVEN_CENTRAL_PASSWORD
           gpg-private-key: ${{ secrets.MAVEN_SIGNING_KEY_ARMOR_ASC }}
           gpg-passphrase-env-var: MAVEN_GPG_PASSPHRASE
+
       - name: Set release version
         env:
           POM: ${{ inputs.pom }}
           VERSION: ${{ needs.validate.outputs.version }}
         run: |
           mvn --batch-mode --no-transfer-progress -f "$POM" org.codehaus.mojo:versions-maven-plugin:2.21.0:set "-DnewVersion=$VERSION" -DprocessAllModules=true -DgenerateBackupPoms=false
+
       - name: Publish to Maven Central
         env:
           POM: ${{ inputs.pom }}
@@ -171,6 +177,7 @@ jobs:
           MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_SIGNING_KEY_PASSPHRASE }}
         run: |
           mvn --batch-mode --no-transfer-progress -f "$POM" -Pcentral-release clean deploy
+
       - name: Create GitHub release
         if: ${{ inputs.create-github-release }}
         env:
