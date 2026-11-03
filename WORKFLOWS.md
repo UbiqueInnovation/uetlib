@@ -19,7 +19,16 @@ jobs:
     uses: UbiqueInnovation/uetlib/.github/workflows/mvn-install.yml@<full-commit-sha> # v1.2.3
 ```
 
-The workflow checks out the caller, sets up Java/Maven and caching, and runs `mvn clean install`, including verification and tests. It takes no secrets or private registry settings. A reusable workflow changes the displayed check name; check branch rules against the resulting job name before replacing existing CI.
+The workflow checks out the caller, sets up Java/Maven and caching, and runs `mvn clean install`, including verification and tests. SonarCloud is optional. Add the following to the calling job:
+
+```yaml
+    with:
+      sonar: true
+    secrets:
+      SONAR_TOKEN: ${{ secrets.UBIQUE_SONAR_TOKEN }}
+```
+
+ Analysis runs after install in the same workspace, using the existing test and coverage results without rerunning tests. Builds with Sonar disabled need no secrets. A reusable workflow changes the displayed check name; check branch rules against the resulting job name before replacing existing CI.
 
 ## Publish a library
 
