@@ -3,7 +3,6 @@ from pathlib import Path
 import os
 import subprocess
 import tempfile
-import tempfile
 import unittest
 
 import yaml
@@ -191,6 +190,40 @@ class NativeInputsTest(unittest.TestCase):
                 names = [s['name'] for s in workflow(name)['jobs'][job]['steps']]
                 self.assertLess(names.index('Stage native artifacts'), names.index('Set up Java'))
                 self.assertLess(names.index('Install system packages'), names.index('Set up Java'))
+
+
+class SonarTest(unittest.TestCase):
+    def test_analysis_reuses_install_results(self):
+        config = workflow('mvn-install.yml')
+        call = config.get('on', config.get(True))['workflow_call']
+        self.assertFalse(call['inputs']['sonar']['default'])
+        self.assertFalse(call['secrets']['SONAR_TOKEN']['required'])
+        steps = config['jobs']['build']['steps']
+        build = next(s for s in steps if s['name'] == 'Build, test and install')
+        scan = next(s for s in steps if s['name'] == 'Run SonarCloud analysis')
+        self.assertLess(steps.index(build), steps.index(scan))
+        self.assertEqual(scan['if'], '${{ inputs.sonar }}')
+        self.assertNotIn('SONAR_TOKEN', build['env'])
+        self.assertEqual(scan['env']['SONAR_TOKEN'], '${{ secrets.SONAR_TOKEN }}')
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            maven = root / 'mvn'
+            maven.write_text('#!/bin/bash\n'
+                             'if [[ "$*" == *"clean install" ]]; then\n'
+                             '  touch coverage.xml\n'
+                             'elif [[ "$*" == *"sonar-maven-plugin:sonar" ]]; then\n'
+                             '  test -f coverage.xml || exit 1\n'
+                             'else exit 1; fi\n'
+                             'echo "$*" >> calls\n')
+            maven.chmod(0o755)
+            env = dict(os.environ, PATH=str(root) + os.pathsep + os.environ['PATH'], POM='pom.xml')
+            for step in (build, scan):
+                subprocess.run(['bash', '-e', '-c', step['run']], cwd=root, env=env, check=True)
+            calls = (root / 'calls').read_text().splitlines()
+            self.assertEqual(len(calls), 2)
+            self.assertTrue(calls[0].endswith('clean install'))
+            self.assertTrue(calls[1].endswith('org.sonarsource.scanner.maven:sonar-maven-plugin:sonar'))
+            self.assertNotRegex(calls[1], r'\b(test|verify|install|clean)\b')
 
 
 if __name__ == '__main__':
