@@ -1,6 +1,8 @@
 # CHANGELOG
 
-## Unreleased
+## 1.0.0
+
+First Public release.
 
 - Keep public coordinate rules in `renovate-migration.json5`, extended by `renovate-base.json5`.
 
@@ -20,8 +22,4 @@
 - Prepare the public `ch.ubique.uetlib` Maven coordinate migration and target its planned major releases in Renovate
   replacement PRs.
 - Add `uetlib-rewrite` to the project catalogue.
-
-## 1.0.0
-
-First release.
 
