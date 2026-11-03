@@ -134,16 +134,11 @@ repository.
 ## Validate changes
 
 ```sh
-python3 -m venv /tmp/uetlib-workflow-tests
-/tmp/uetlib-workflow-tests/bin/pip install -r tests/requirements.txt
-/tmp/uetlib-workflow-tests/bin/python -m unittest discover -s tests -v
 actionlint
 shellcheck enable-gh-settings.sh
 ```
 
-Tests execute the release validation and native staging/package scripts directly and check the secret contract,
-environment gate, action pins, shell syntax and publication/release ordering. Public CI runs these tests and workflow
-linting under the required `Build Project` check.
+Public CI runs workflow linting and settings-script checks under the required `Build Project` check.
 
 ## Prerelease publishing
 
