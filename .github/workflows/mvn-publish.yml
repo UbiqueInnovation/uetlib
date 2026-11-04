@@ -35,16 +35,16 @@ on:
         required: false
       UB_ARTIFACTORY_REPO_UBIQUE:
         required: false
-      MAVEN_CENTRAL_USERNAME:
+      UETLIB_MAVEN_CENTRAL_USERNAME:
         required: false
         description: Central Portal token username. May instead be supplied by the environment.
-      MAVEN_CENTRAL_PASSWORD:
+      UETLIB_MAVEN_CENTRAL_PASSWORD:
         required: false
         description: Central Portal token password. May instead be supplied by the environment.
-      MAVEN_SIGNING_KEY_ARMOR_ASC:
+      SYSTEMS_UBIQUE_SIGNING_KEY_ARMOR_ASC:
         required: false
         description: ASCII-armored private signing key. May instead be supplied by the environment.
-      MAVEN_SIGNING_KEY_PASSPHRASE:
+      SYSTEMS_UBIQUE_SIGNING_KEY_PASSPHRASE:
         required: false
         description: Signing key passphrase. May instead be supplied by the environment.
 permissions:

@@ -47,8 +47,8 @@ jobs:
           path: central-batch/
       - name: Upload one Central deployment
         env:
-          MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
-          MAVEN_CENTRAL_PASSWORD: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+          MAVEN_CENTRAL_USERNAME: ${{ secrets.UETLIB_MAVEN_CENTRAL_USERNAME }}
+          MAVEN_CENTRAL_PASSWORD: ${{ secrets.UETLIB_MAVEN_CENTRAL_PASSWORD }}
         run: python3 scripts/central_batch.py publish --name "uetlib-${{ github.run_id }}-${{ github.run_attempt }}"
       - name: Preserve deployment receipt
         if: ${{ always() }}

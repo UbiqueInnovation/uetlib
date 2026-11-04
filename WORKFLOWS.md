@@ -20,8 +20,9 @@ completed versioned bundle descriptor to Artifactory. No individual repo uploads
 `clean install` without publishing credentials.
 
 Artifactory secrets are `UB_ARTIFACTORY_USER`, `UB_ARTIFACTORY_PASSWORD`, `UB_ARTIFACTORY_URL` and
-`UB_ARTIFACTORY_REPO_UBIQUE`. Stable versions also require `MAVEN_SIGNING_KEY_ARMOR_ASC` and
-`MAVEN_SIGNING_KEY_PASSPHRASE`. No signing key ID is needed. These must be available in the calling repository; an
+`UB_ARTIFACTORY_REPO_UBIQUE`. Stable versions also require `SYSTEMS_UBIQUE_SIGNING_KEY_ARMOR_ASC` and
+`SYSTEMS_UBIQUE_SIGNING_KEY_PASSPHRASE`. No signing key ID is needed. These must be available in the calling repository;
+an
 environment on the entry repo does not provide secrets to other repositories.
 
 Optional `sonar: true` runs analysis in the same job after tests. Map `SONAR_TOKEN` from the caller's
@@ -53,7 +54,8 @@ artifacts. Inotify builds Linux JNI in Maven and retains LGPL-3.0-or-later licen
 
 ## Central promotion
 
-Only **Publish Central batch** uses `MAVEN_CENTRAL_USERNAME` and `MAVEN_CENTRAL_PASSWORD`. Configure its `maven-central`
+Only **Publish Central batch** uses `UETLIB_MAVEN_CENTRAL_USERNAME` and `UETLIB_MAVEN_CENTRAL_PASSWORD`. Configure its
+`maven-central`
 environment with approval and default-branch restrictions. Start with its default assembly-only mode, inspect the batch
 artifact, then enable publication on a subsequent manual run. Publication waits for validation; Central completes
 asynchronously.
