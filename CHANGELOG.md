@@ -2,6 +2,8 @@
 
 ## 1.0.0
 
+- Move Java packages and class references from `ch.ubique.uetlib` to `ch.uetlib`.
+
 First Public release.
 
 - Keep public coordinate rules in `renovate-migration.json5`, extended by `renovate-base.json5`.
@@ -12,7 +14,7 @@ First Public release.
 
 - Add Apache-2.0 licensing, shared contribution/security guidance and Maven publication metadata across the
   repositories.
-- Move Java packages to `ch.ubique.uetlib`, provide a combined OpenRewrite migration, and document its command in the
+- Move Java packages to `ch.uetlib`, provide a combined OpenRewrite migration, and document its command in the
   major-release changelogs.
 
 - Add reusable Maven install and Central publishing workflows with Java 25 by default, scoped organization secrets,
