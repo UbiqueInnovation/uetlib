@@ -2,6 +2,10 @@
 
 ## 1.0.0
 
+- Deploy all versions to Artifactory with Maven; stable releases additionally create and store a Central bundle.
+
+- Create Maven settings with the pinned s4u action, configuring the Artifactory virtual repository and its server credentials.
+
 - Move Java packages and class references from `ch.ubique.uetlib` to `ch.uetlib`.
 
 First Public release.

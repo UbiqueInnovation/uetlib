@@ -14,13 +14,15 @@ jobs:
 ```
 
 The workflow uses runner Maven and Temurin Java 25 by default. Override `java-version` for Java 17 projects such as
-rewrite; `pom` defaults to `pom.xml`. Authenticated builds deploy snapshots/prereleases to Artifactory. Stable versions
-activate `central-release` with `central.publishing.skipUpload=true`, then upload the signed bundle contents and a
-completed versioned bundle descriptor to Artifactory. No individual repo uploads to Central. PR events run
+rewrite; `pom` defaults to `pom.xml`. Every authenticated build deploys its Maven artifacts to Artifactory using the normal Maven deploy plugin. Stable versions
+add `central-release` with `central.publishing.skipUpload=true`: an additional deploy-phase execution creates a bundle
+from the same signed artifacts. The workflow then uploads only that extra ZIP and its versioned descriptor to Artifactory. No individual repo uploads to Central. PR events run
 `clean install` without publishing credentials.
 
 Artifactory secrets are `UB_ARTIFACTORY_USER`, `UB_ARTIFACTORY_PASSWORD`, `UB_ARTIFACTORY_URL` and
-`UB_ARTIFACTORY_REPO_UBIQUE`. Stable versions also require `SYSTEMS_UBIQUE_SIGNING_KEY_ARMOR_ASC` and
+`UB_ARTIFACTORY_REPO_UBIQUE`. The pinned s4u Maven settings action configures
+`ubique-artifactory-virtual` for dependency resolution with its server credentials. Build plugins use Maven's default plugin repositories.
+Stable versions also require `SYSTEMS_UBIQUE_SIGNING_KEY_ARMOR_ASC` and
 `SYSTEMS_UBIQUE_SIGNING_KEY_PASSPHRASE`. No signing key ID is needed. These must be available in the calling repository;
 an
 environment on the entry repo does not provide secrets to other repositories.

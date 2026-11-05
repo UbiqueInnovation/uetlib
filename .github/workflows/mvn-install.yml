@@ -104,37 +104,31 @@ jobs:
           java-version: ${{ inputs.java-version }}
           cache: maven
           cache-dependency-path: "**/pom.xml"
-          server-id: ubique-artifactory-virtual
-          server-username-env-var: MAVEN_USERNAME
-          server-password-env-var: MAVEN_PASSWORD
+          overwrite-settings: false
           gpg-private-key: ${{ github.event_name != 'pull_request' && github.event_name != 'pull_request_target' && secrets.SYSTEMS_UBIQUE_SIGNING_KEY_ARMOR_ASC || '' }}
           gpg-passphrase-env-var: MAVEN_GPG_PASSPHRASE
 
-      - name: Enable Artifactory dependency resolution
+      # s4u skips empty settings inputs.
+      - name: Create settings.xml
         if: ${{ github.event_name != 'pull_request' && github.event_name != 'pull_request_target' }}
-        env:
-          ARTIFACTORY_URL: ${{ secrets.UB_ARTIFACTORY_URL }}${{ secrets.UB_ARTIFACTORY_REPO_UBIQUE }}
-        run: |
-          python3 - <<'PYTHON'
-          import os, pathlib, xml.etree.ElementTree as ET
-          path = pathlib.Path.home() / '.m2/settings.xml'
-          tree = ET.parse(path)
-          root = tree.getroot()
-          ns = root.tag.removesuffix('settings')
-          def node(parent, name, text=None):
-              element = ET.SubElement(parent, ns + name)
-              element.text = text
-              return element
-          profile = node(node(root, 'profiles'), 'profile')
-          node(profile, 'id', 'artifactory')
-          for collection, item in [('repositories', 'repository'), ('pluginRepositories', 'pluginRepository')]:
-              repo = node(node(profile, collection), item)
-              node(repo, 'id', 'ubique-artifactory-virtual')
-              node(repo, 'url', os.environ['ARTIFACTORY_URL'])
-              node(node(repo, 'snapshots'), 'enabled', 'true')
-          node(node(root, 'activeProfiles'), 'activeProfile', 'artifactory')
-          tree.write(path, encoding='utf-8', xml_declaration=True)
-          PYTHON
+        uses: s4u/maven-settings-action@4cfd36368400327fd45dcb28f190ae7b85533deb # v4.1.0
+        with:
+          githubServer: false
+          servers: >-
+            [
+              {
+                "id": "ubique-artifactory-virtual",
+                "username": "${{ secrets.UB_ARTIFACTORY_USER }}",
+                "password": "${{ secrets.UB_ARTIFACTORY_PASSWORD }}"
+              }
+            ]
+          repositories: >-
+            [
+              {
+                "id": "ubique-artifactory-virtual",
+                "url": "${{ secrets.UB_ARTIFACTORY_URL }}${{ secrets.UB_ARTIFACTORY_REPO_UBIQUE }}"
+              }
+            ]
 
       - name: Set release version
         if: ${{ inputs.release-version != '' }}
@@ -166,15 +160,14 @@ jobs:
           : "${MAVEN_USERNAME:?Artifactory username is required}"
           : "${MAVEN_PASSWORD:?Artifactory password is required}"
           : "${ARTIFACTORY_URL:?Artifactory URL is required}"
+          release_args=()
           version="$(mvn --quiet -f "$POM" help:evaluate -Dexpression=project.version -DforceStdout)"
           if [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ || "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+-[0-9]{4}\.[0-9]+\.[0-9]+$ ]]; then
             : "${MAVEN_GPG_KEY:?Stable releases require the signing key}"
             echo "central_bundle=true" >> "$GITHUB_OUTPUT"
-            # Build once: publish the exact signed bundle contents to Artifactory below.
-            mvn --batch-mode --no-transfer-progress -f "$POM" -Pcentral-release -Dcentral.publishing.skipUpload=true clean deploy
-          else
-            mvn --batch-mode --no-transfer-progress -f "$POM" clean deploy "-DaltDeploymentRepository=ubique-artifactory-virtual::$ARTIFACTORY_URL"
+            release_args=(-Pcentral-release -Dcentral.publishing.skipUpload=true)
           fi
+          mvn --batch-mode --no-transfer-progress -f "$POM" "${release_args[@]}" clean deploy "-DaltDeploymentRepository=ubique-artifactory-virtual::$ARTIFACTORY_URL"
 
       - name: Store completed Central bundle in Artifactory
         if: ${{ steps.maven.outputs.central_bundle == 'true' }}
@@ -195,19 +188,6 @@ jobs:
           bundle = bundles[0]
           base = os.environ['ARTIFACTORY_URL'].rstrip('/')
           auth = base64.b64encode((os.environ['MAVEN_USERNAME'] + ':' + os.environ['MAVEN_PASSWORD']).encode()).decode()
-          def put_immutable(name, data):
-              url = base + '/' + name
-              headers = {'Authorization': 'Basic ' + auth}
-              try:
-                  with urllib.request.urlopen(urllib.request.Request(url, headers=headers)) as response:
-                      if response.read() != data:
-                          raise SystemExit('Refusing to overwrite release file: ' + name)
-                      return
-              except urllib.error.HTTPError as error:
-                  if error.code != 404:
-                      raise
-              with urllib.request.urlopen(urllib.request.Request(url, data=data, method='PUT', headers=headers)) as response:
-                  response.read()
           with zipfile.ZipFile(bundle) as archive:
               files = {name: hashlib.sha256(archive.read(name)).hexdigest() for name in archive.namelist() if not name.endswith('/')}
               poms = [name for name in files if name.endswith('.pom')]
@@ -217,11 +197,6 @@ jobs:
               if len(versions) != 1:
                   raise SystemExit('Expected one release version per reactor')
               version = versions.pop()
-              # Publish exactly the signed files that will later be promoted to Central.
-              for name in files:
-                  if '..' in pathlib.PurePosixPath(name).parts or name.startswith('/'):
-                      raise SystemExit('Invalid bundle path: ' + name)
-                  put_immutable(name, archive.read(name))
           manifest = bundle.with_name('manifest.json')
           manifest.write_text(json.dumps({'repository': os.environ['GITHUB_REPOSITORY'], 'commit': os.environ['GITHUB_SHA'], 'version': version, 'sha256': hashlib.sha256(bundle.read_bytes()).hexdigest(), 'files': files}, indent=2) + '\n')
           repo = os.environ['GITHUB_REPOSITORY'].split('/')[1]
