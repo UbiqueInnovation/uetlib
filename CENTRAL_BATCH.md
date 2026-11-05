@@ -1,9 +1,10 @@
 # Stage independently, publish one batch
 
-Each library builds in its own repository. `mvn-install.yml` now runs tests and deploys snapshots/prereleases to
-Artifactory. For a stable version it runs `mvn -Pcentral-release -Dcentral.publishing.skipUpload=true clean deploy`: the
-plugin signs and packages the reactor without contacting Central. The workflow uploads the exact bundle contents to
-Artifactory and stores the completed bundle as a Maven artifact:
+Each library builds in its own repository. `mvn-install.yml` runs tests and deploys all versions to Artifactory
+using normal Maven deployment for JARs/POMs and attached artifacts.
+Stable versions additionally activate `central-release` with `central.publishing.skipUpload=true`: an explicit
+deploy-phase execution creates the Central bundle from those same signed artifacts without replacing the normal
+Maven deploy binding or contacting Central. The workflow stores the additional completed bundle as a Maven artifact:
 
 ```
 ch.uetlib.central-bundles:<repository>:<version>:zip
