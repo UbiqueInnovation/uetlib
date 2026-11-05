@@ -2,9 +2,19 @@
 
 ## 1.0.0
 
+- Add a repository dependency graph without test dependencies or testing repositories.
+
+- Resolve Central bundle upload paths absolutely so Maven handles root and nested POMs correctly.
+
+- Add the uetlib icon, wordmark and prerelease blueprint logo; replace project-page placeholders.
+
+- Regenerate repository dependency graphs from Maven POMs and list inotify, Error Prone and OpenRewrite on the project
+  page.
+
 - Deploy all versions to Artifactory with Maven; stable releases additionally create and store a Central bundle.
 
-- Create Maven settings with the pinned s4u action, configuring the Artifactory virtual repository and its server credentials.
+- Create Maven settings with the pinned s4u action, configuring the Artifactory virtual repository and its server
+  credentials.
 
 - Move Java packages and class references from `ch.ubique.uetlib` to `ch.uetlib`.
 

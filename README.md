@@ -2,7 +2,30 @@
 
 Create Issues for all uetlib repos here.
 
-See [shared Maven workflows](WORKFLOWS.md) for build/test and explicit Maven Central publishing, [contribution guidance](CONTRIBUTING.md), [security reporting](SECURITY.md), and the [public release checklist](RELEASE_CHECKLIST.md).
+See [shared Maven workflows](WORKFLOWS.md) for build/test and explicit Maven Central
+publishing, [contribution guidance](CONTRIBUTING.md), [security reporting](SECURITY.md), and
+the [public release checklist](RELEASE_CHECKLIST.md).
+
+## Repository dependency graphs
+
+[Without test dependencies](graph-no-tests.dot.svg) · [Full graph](graph.dot.svg) · [Testing graph](graph-test.dot.svg)
+
+Arrows point from a repository to the repository it references. Modules are grouped by repository;
+edge labels distinguish direct dependencies, test dependencies, parents, managed dependencies and build tools.
+The full graph includes every local uetlib repository, even standalone ones, except the intentionally excluded
+`uetlib-rust*` repositories. Dashed boxes show referenced
+Maven artifacts whose sources are outside the checkout. These graphs describe POM references, not a runtime classpath.
+
+The non-test graph omits test-scope references and the test libraries/reference application, while retaining parents,
+managed versions and build tools.
+
+Regenerate all DOT sources and SVGs from sibling checkouts with Python 3 and Graphviz installed:
+
+```sh
+python3 scripts/update_graphs.py
+```
+
+Use `--workspace /path/to/uetlib` to select the directory containing the component checkouts.
 
 ## Current uetlib repos with their artifacts
 
@@ -100,6 +123,15 @@ See [shared Maven workflows](WORKFLOWS.md) for build/test and explicit Maven Cen
 
 - uetlib-rewrite: versioned OpenRewrite migration recipes
 
+### [uetlib-errorprone](https://github.com/UbiqueInnovation/uetlib-errorprone)
+
+- uetlib-errorprone: compile-time checks for uetlib conventions
+
+### [uetlib-inotify-java](https://github.com/UbiqueInnovation/uetlib-inotify-java)
+
+- uetlib-inotify-java: Linux inotify JNI bindings (LGPL-3.0-or-later)
+
 ## License
 
-Except where otherwise noted, original uetlib code is licensed under the [Apache License 2.0](LICENSE). Third-party files retain their original license terms; see [NOTICE](NOTICE) and any third-party notices in this repository.
+Except where otherwise noted, original uetlib code is licensed under the [Apache License 2.0](LICENSE). Third-party
+files retain their original license terms; see [NOTICE](NOTICE) and any third-party notices in this repository.
