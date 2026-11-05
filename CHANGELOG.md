@@ -2,6 +2,22 @@
 
 ## 1.0.0
 
+- Add a repository dependency graph without test dependencies or testing repositories.
+
+- Resolve Central bundle upload paths absolutely so Maven handles root and nested POMs correctly.
+
+- Add the uetlib icon, wordmark and prerelease blueprint logo; replace project-page placeholders.
+
+- Regenerate repository dependency graphs from Maven POMs and list inotify, Error Prone and OpenRewrite on the project
+  page.
+
+- Deploy all versions to Artifactory with Maven; stable releases additionally create and store a Central bundle.
+
+- Create Maven settings with the pinned s4u action, configuring the Artifactory virtual repository and its server
+  credentials.
+
+- Move Java packages and class references from `ch.ubique.uetlib` to `ch.uetlib`.
+
 First Public release.
 
 - Keep public coordinate rules in `renovate-migration.json5`, extended by `renovate-base.json5`.
@@ -12,14 +28,14 @@ First Public release.
 
 - Add Apache-2.0 licensing, shared contribution/security guidance and Maven publication metadata across the
   repositories.
-- Move Java packages to `ch.ubique.uetlib`, provide a combined OpenRewrite migration, and document its command in the
+- Move Java packages to `ch.uetlib`, provide a combined OpenRewrite migration, and document its command in the
   major-release changelogs.
 
 - Add reusable Maven install and Central publishing workflows with Java 25 by default, scoped organization secrets,
   release validation and local staging/signing.
 - Add workflow tests and CI for the required `Build Project` check.
 
-- Prepare the public `ch.ubique.uetlib` Maven coordinate migration and target its planned major releases in Renovate
+- Prepare the public `ch.uetlib` Maven coordinate migration and target its planned major releases in Renovate
   replacement PRs.
 - Add `uetlib-rewrite` to the project catalogue.
 

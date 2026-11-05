@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="220 90 360 360" width="256" height="256">
+  <defs>
+    <!-- Squircle Clip Path -->
+    <clipPath id="icon-only-squircle">
+      <rect x="220" y="90" width="360" height="360" rx="82" ry="82" />
+    </clipPath>
+
+    <!-- Technical Blueprint Grid Pattern -->
+    <pattern id="blueprint-grid" width="20" height="20" patternUnits="userSpaceOnUse">
+      <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#13233F" stroke-width="1" />
+      <path d="M 100 0 L 0 0 0 100" fill="none" stroke="#1D3354" stroke-width="1.5" />
+    </pattern>
+  </defs>
+
+  <g clip-path="url(#icon-only-squircle)">
+    <!-- Blueprint Dark Background -->
+    <rect x="220" y="90" width="360" height="360" fill="#0A192F" />
+    <rect x="220" y="90" width="360" height="360" fill="url(#blueprint-grid)" />
+
+    <!-- Squircle Technical Border Frame -->
+    <rect x="226" y="96" width="348" height="348" rx="78" ry="78" fill="none" stroke="#64FFDA" stroke-width="1.5" stroke-dasharray="8,4" opacity="0.4" />
+
+    <!-- Subtle Distant Ridge (Blueprint Outline) -->
+    <polygon points="220,335 305,315 395,322 500,330 580,348 580,450 220,450" fill="#112240" stroke="#8892B0" stroke-width="1" stroke-dasharray="4,4" opacity="0.6" />
+
+    <!-- LEFT: Observation Tower (Architectural Draft Lines) -->
+    <g stroke="#64FFDA" stroke-linejoin="round" stroke-linecap="round" fill="none" stroke-width="1.2" opacity="0.9">
+      <line x1="355" y1="190" x2="355" y2="215" />
+      <line x1="355" y1="215" x2="355" y2="242" stroke-width="1.8" />
+      <line x1="355" y1="216" x2="350" y2="242" />
+      <line x1="355" y1="216" x2="360" y2="242" />
+      <polygon points="344,242 371,242 369,246 346,246" fill="#64FFDA" stroke="none" />
+      <line x1="355" y1="246" x2="355" y2="325" stroke-dasharray="3,2" />
+      <line x1="349" y1="246" x2="336" y2="325" stroke-width="1.5" />
+      <line x1="361" y1="246" x2="374" y2="325" stroke-width="1.5" />
+      <line x1="346" y1="264" x2="364" y2="264" />
+      <line x1="342" y1="284" x2="368" y2="284" />
+      <line x1="339" y1="305" x2="371" y2="305" />
+      <line x1="349" y1="246" x2="355" y2="264" />
+      <line x1="361" y1="246" x2="355" y2="264" />
+      <line x1="346" y1="264" x2="355" y2="284" />
+      <line x1="364" y1="264" x2="355" y2="284" />
+      <line x1="342" y1="284" x2="355" y2="305" />
+      <line x1="368" y1="284" x2="355" y2="305" />
+    </g>
+
+    <!-- RIGHT: TV Tower (Precision CAD Outline) -->
+    <g fill="none" stroke="#64FFDA" stroke-width="1.2" opacity="0.9">
+      <rect x="448.5" y="138" width="3" height="30" />
+      <rect x="447.5" y="168" width="5" height="36" />
+      <rect x="446.5" y="204" width="7" height="34" />
+      <rect x="444.5" y="224" width="11" height="2.5" rx="0.5" />
+      <rect x="444.5" y="229" width="11" height="2.5" rx="0.5" />
+      <rect x="445.5" y="238" width="9" height="18" />
+      <polygon points="437,254 462,254 460,262 439,262" />
+      <rect x="440.5" y="251.5" width="18.5" height="2.5" />
+      <polygon points="441,262 458,262 454.5,265.5 444.5,265.5" />
+      <polygon points="444.5,265.5 454.5,265.5 455.5,325 443.5,325" />
+    </g>
+
+    <!-- THREE-COLOR HILL SHADES (From your precise reference layout) -->
+    <!-- Left Peak: Vibrant Blue (#007AFF) -->
+    <polygon points="220,362 290,332 365,306 425,302 390,450 220,450" fill="#007AFF" stroke="#64FFDA" stroke-width="1.2" fill-opacity="0.85" />
+
+    <!-- Center Bridge: Medium Blue (#0062CC) -->
+    <polygon points="425,302 475,304 580,368 580,450 325,450 385,355" fill="#0062CC" stroke="#64FFDA" stroke-width="1.2" fill-opacity="0.85" />
+
+    <!-- Right Facet: Dark Slate (#1E3246) -->
+    <polygon points="475,304 530,335 580,368 580,450 435,450 465,355" fill="#1E3246" stroke="#64FFDA" stroke-width="1.2" fill-opacity="0.85" />
+
+    <!-- Elevation Contour Lines -->
+    <path d="M 235,380 Q 300,345 375,330 T 520,360" fill="none" stroke="#64FFDA" stroke-width="0.75" stroke-dasharray="2,2" opacity="0.5" />
+    <path d="M 230,405 Q 310,375 400,365 T 550,390" fill="none" stroke="#64FFDA" stroke-width="0.75" stroke-dasharray="2,2" opacity="0.5" />
+
+    <!-- Bottom Dark Technical Base (#1E3246) -->
+    <polygon points="220,412 315,406 435,418 525,412 580,404 580,450 220,450" fill="#1E3246" stroke="#8892B0" stroke-width="1" />
+  </g>
+</svg>

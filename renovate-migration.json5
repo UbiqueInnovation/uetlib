@@ -1,6 +1,6 @@
 {
     "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-    "description": "Replace legacy ch.ubique:uetlib-* Maven coordinates with the public ch.ubique.uetlib migration releases.",
+    "description": "Replace legacy ch.ubique:uetlib-* Maven coordinates with the public ch.uetlib migration releases.",
     "packageRules": [
         {
             "description": "Migrate uetlib Maven coordinates to the public groupId",
@@ -13,10 +13,10 @@
             "matchPackageNames": [
                 "/^ch\\.ubique:uetlib.*$/"
             ],
-            "replacementNameTemplate": "{{{replace '^ch[.]ubique:' 'ch.ubique.uetlib:' packageName}}}",
+            "replacementNameTemplate": "{{{replace '^ch[.]ubique:' 'ch.uetlib:' packageName}}}",
             "automerge": false,
             "prBodyNotes": [
-                "This migration changes the Maven groupId. Verify that the target uetlib release is available under ch.ubique.uetlib before merging."
+                "This migration changes the Maven groupId. Verify that the target uetlib release is available under ch.uetlib before merging."
             ]
         },
         {
@@ -31,7 +31,7 @@
                 "ch.ubique:uetlib-errorprone",
                 "ch.ubique:uetlib-webp"
             ],
-            "replacementNameTemplate": "{{{replace '^ch[.]ubique:' 'ch.ubique.uetlib:' packageName}}}",
+            "replacementNameTemplate": "{{{replace '^ch[.]ubique:' 'ch.uetlib:' packageName}}}",
             "replacementVersion": "1.0.0",
             "automerge": false
         },
@@ -46,7 +46,7 @@
             "matchPackageNames": [
                 "ch.ubique:uetlib-testapp"
             ],
-            "replacementNameTemplate": "{{{replace '^ch[.]ubique:' 'ch.ubique.uetlib:' packageName}}}",
+            "replacementNameTemplate": "{{{replace '^ch[.]ubique:' 'ch.uetlib:' packageName}}}",
             "replacementVersion": "2.0.0",
             "automerge": false
         },
@@ -62,7 +62,7 @@
                 "ch.ubique:uetlib-bom",
                 "ch.ubique:uetlib-parent"
             ],
-            "replacementNameTemplate": "{{{replace '^ch[.]ubique:' 'ch.ubique.uetlib:' packageName}}}",
+            "replacementNameTemplate": "{{{replace '^ch[.]ubique:' 'ch.uetlib:' packageName}}}",
             "replacementVersion": "2026.11.0",
             "automerge": false
         },
@@ -102,7 +102,7 @@
                 "ch.ubique:uetlib-testcontainers-postgresql",
                 "ch.ubique:uetlib-testcontainers-redis"
             ],
-            "replacementNameTemplate": "{{{replace '^ch[.]ubique:' 'ch.ubique.uetlib:' packageName}}}",
+            "replacementNameTemplate": "{{{replace '^ch[.]ubique:' 'ch.uetlib:' packageName}}}",
             "replacementVersion": "3.0.0",
             "automerge": false
         },
@@ -126,7 +126,7 @@
                 "ch.ubique:uetlib-spring-boot-parent",
                 "ch.ubique:uetlib-spring-boot-security"
             ],
-            "replacementNameTemplate": "{{{replace '^ch[.]ubique:' 'ch.ubique.uetlib:' packageName}}}",
+            "replacementNameTemplate": "{{{replace '^ch[.]ubique:' 'ch.uetlib:' packageName}}}",
             "replacementVersion": "4.0.0",
             "automerge": false
         },
@@ -141,7 +141,7 @@
             "matchPackageNames": [
                 "ch.ubique:uetlib-spring-boot-starter-parent"
             ],
-            "replacementNameTemplate": "{{{replace '^ch[.]ubique:' 'ch.ubique.uetlib:' packageName}}}",
+            "replacementNameTemplate": "{{{replace '^ch[.]ubique:' 'ch.uetlib:' packageName}}}",
             "replacementVersion": "4.1.1-2026.11.0",
             "automerge": false
         },
@@ -157,8 +157,22 @@
                 "ch.ubique:uetlib-job",
                 "ch.ubique:uetlib-self-bom"
             ],
-            "replacementNameTemplate": "{{{replace '^ch[.]ubique:' 'ch.ubique.uetlib:' packageName}}}",
+            "replacementNameTemplate": "{{{replace '^ch[.]ubique:' 'ch.uetlib:' packageName}}}",
             "replacementVersion": "6.0.0",
+            "automerge": false
+        },
+        {
+            "description": "Move intermediate public coordinates to ch.uetlib, preserving versions",
+            "matchManagers": [
+                "maven"
+            ],
+            "matchDatasources": [
+                "maven"
+            ],
+            "matchPackageNames": [
+                "/^ch\\.ubique\\.uetlib:uetlib.*$/"
+            ],
+            "replacementNameTemplate": "{{{replace '^ch[.]ubique[.]uetlib:' 'ch.uetlib:' packageName}}}",
             "automerge": false
         }
     ]
