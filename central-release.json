@@ -1,0 +1,25 @@
+{
+  "repositories": {
+    "uetlib-bom": "2026.11.0",
+    "uetlib-core": "3.0.0",
+    "uetlib-db": "3.0.0",
+    "uetlib-errorprone": "1.0.0",
+    "uetlib-geo": "4.0.0",
+    "uetlib-inotify-java": "3.0.0",
+    "uetlib-job": "6.0.0",
+    "uetlib-monitoring": "3.0.0",
+    "uetlib-parent": "2026.11.0",
+    "uetlib-payment": "3.0.0",
+    "uetlib-rewrite": "0.1.0",
+    "uetlib-self-bom": "6.0.0",
+    "uetlib-spring-boot": "4.0.0",
+    "uetlib-spring-boot-starter-parent": "4.1.1-2026.11.0",
+    "uetlib-spring-boot-test": "3.0.0",
+    "uetlib-spring-cloud": "3.0.0",
+    "uetlib-storage": "3.0.0",
+    "uetlib-storage-spring-boot": "3.0.0",
+    "uetlib-test": "3.0.0",
+    "uetlib-testcontainers": "3.0.0",
+    "uetlib-webp": "1.0.0"
+  }
+}
