@@ -27,6 +27,16 @@ python3 scripts/update_graphs.py
 
 Use `--workspace /path/to/uetlib` to select the directory containing the component checkouts.
 
+## Geo integration migration
+
+`ch.uetlib:uetlib-spring-boot-geo` has moved to the geo repository as
+`ch.uetlib:uetlib-geo-spring-boot`. Its Java packages move from `ch.uetlib.spring.boot.geo`
+to `ch.uetlib.geo.spring.boot`. Update dependencies and imports, or run the OpenRewrite migration;
+the Renovate preset also renames the Maven artifact. This removes the repo-level release-order cycle
+between geo, job and Spring Boot. The artifact dependency graph remains acyclic.
+
+See [configuration migration](CONFIGURATION_MIGRATION.md) for the new property prefixes and OpenRewrite command.
+
 ## Current uetlib repos with their artifacts
 
 ### [uetlib-self-bom](https://github.com/UbiqueInnovation/uetlib-self-bom)
@@ -77,6 +87,7 @@ Use `--workspace /path/to/uetlib` to select the directory containing the compone
 - uetlib-geo
 - uetlib-geo-db
 - uetlib-geo-job
+- uetlib-geo-spring-boot: Spring Boot JSON and Springdoc integration (`ch.uetlib.geo.spring.boot`)
 
 ### [uetlib-job](https://github.com/UbiqueInnovation/uetlib-job)
 
@@ -95,7 +106,6 @@ Use `--workspace /path/to/uetlib` to select the directory containing the compone
 ### [uetlib-spring-boot](https://github.com/UbiqueInnovation/uetlib-spring-boot)
 
 - uetlib-spring-boot
-- uetlib-spring-boot-geo
 - uetlib-spring-boot-security
 
 ### [uetlib-spring-cloud](https://github.com/UbiqueInnovation/uetlib-spring-cloud)
