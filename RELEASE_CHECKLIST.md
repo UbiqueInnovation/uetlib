@@ -26,8 +26,8 @@ Artifactory is not declared in the public POMs.
 
 ## Before publication
 
-- Finish the separate source/history leak review and review third-party attribution, especially the geo schemas, legacy
-  Logback SQL resources and WebP test images/native dependencies.
+- Finish the separate source/history leak review and review third-party attribution, especially the geo schemas and WebP
+  test images/native dependencies.
 - Configure Central namespace access, scoped organization signing/publishing secrets and the protected `maven-central`
   environment.
 - Release the shared workflows, then replace library CI/release callers with the pinned workflow SHA and matching
