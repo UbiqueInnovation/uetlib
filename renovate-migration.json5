@@ -28,7 +28,21 @@
                 "maven"
             ],
             "matchPackageNames": [
-                "ch.ubique:uetlib-errorprone",
+                "ch.ubique:uetlib-errorprone"
+            ],
+            "replacementNameTemplate": "{{{replace '^ch[.]ubique:' 'ch.uetlib:' packageName}}}",
+            "replacementVersion": "0.1.0",
+            "automerge": false
+        },
+        {
+            "description": "Target the first public migration release",
+            "matchManagers": [
+                "maven"
+            ],
+            "matchDatasources": [
+                "maven"
+            ],
+            "matchPackageNames": [
                 "ch.ubique:uetlib-webp"
             ],
             "replacementNameTemplate": "{{{replace '^ch[.]ubique:' 'ch.uetlib:' packageName}}}",
@@ -59,7 +73,21 @@
                 "maven"
             ],
             "matchPackageNames": [
-                "ch.ubique:uetlib-bom",
+                "ch.ubique:uetlib-bom"
+            ],
+            "replacementNameTemplate": "{{{replace '^ch[.]ubique:' 'ch.uetlib:' packageName}}}",
+            "replacementVersion": "2026.11.3",
+            "automerge": false
+        },
+        {
+            "description": "Target the first public migration release",
+            "matchManagers": [
+                "maven"
+            ],
+            "matchDatasources": [
+                "maven"
+            ],
+            "matchPackageNames": [
                 "ch.ubique:uetlib-parent"
             ],
             "replacementNameTemplate": "{{{replace '^ch[.]ubique:' 'ch.uetlib:' packageName}}}",
@@ -77,7 +105,6 @@
             "matchPackageNames": [
                 "ch.ubique:uetlib-core",
                 "ch.ubique:uetlib-db",
-                "ch.ubique:uetlib-monitoring",
                 "ch.ubique:uetlib-payment",
                 "ch.ubique:uetlib-payment-coverage",
                 "ch.ubique:uetlib-payment-datatrans",
@@ -89,7 +116,6 @@
                 "ch.ubique:uetlib-spring-cloud-parent",
                 "ch.ubique:uetlib-spring-cloud-security",
                 "ch.ubique:uetlib-storage",
-                "ch.ubique:uetlib-storage-spring-boot",
                 "ch.ubique:uetlib-test",
                 "ch.ubique:uetlib-testcontainers",
                 "ch.ubique:uetlib-testcontainers-coverage",
@@ -115,19 +141,49 @@
                 "maven"
             ],
             "matchPackageNames": [
+                "ch.ubique:uetlib-monitoring",
+                "ch.ubique:uetlib-storage-spring-boot"
+            ],
+            "replacementNameTemplate": "{{{replace '^ch[.]ubique:' 'ch.uetlib:' packageName}}}",
+            "replacementVersion": "3.0.1",
+            "automerge": false
+        },
+        {
+            "description": "Target the first public migration release",
+            "matchManagers": [
+                "maven"
+            ],
+            "matchDatasources": [
+                "maven"
+            ],
+            "matchPackageNames": [
                 "ch.ubique:uetlib-geo",
                 "ch.ubique:uetlib-geo-coverage",
                 "ch.ubique:uetlib-geo-db",
                 "ch.ubique:uetlib-geo-job",
                 "ch.ubique:uetlib-geo-parent",
+                "ch.ubique:uetlib-geo-spring-boot"
+            ],
+            "replacementNameTemplate": "{{{replace '^ch[.]ubique:' 'ch.uetlib:' packageName}}}",
+            "replacementVersion": "4.0.0",
+            "automerge": false
+        },
+        {
+            "description": "Target the first public migration release",
+            "matchManagers": [
+                "maven"
+            ],
+            "matchDatasources": [
+                "maven"
+            ],
+            "matchPackageNames": [
                 "ch.ubique:uetlib-spring-boot",
                 "ch.ubique:uetlib-spring-boot-coverage",
-                "ch.ubique:uetlib-spring-boot-geo",
                 "ch.ubique:uetlib-spring-boot-parent",
                 "ch.ubique:uetlib-spring-boot-security"
             ],
             "replacementNameTemplate": "{{{replace '^ch[.]ubique:' 'ch.uetlib:' packageName}}}",
-            "replacementVersion": "4.0.0",
+            "replacementVersion": "4.0.1",
             "automerge": false
         },
         {
@@ -154,11 +210,25 @@
                 "maven"
             ],
             "matchPackageNames": [
-                "ch.ubique:uetlib-job",
                 "ch.ubique:uetlib-self-bom"
             ],
             "replacementNameTemplate": "{{{replace '^ch[.]ubique:' 'ch.uetlib:' packageName}}}",
             "replacementVersion": "6.0.0",
+            "automerge": false
+        },
+        {
+            "description": "Target the first public migration release",
+            "matchManagers": [
+                "maven"
+            ],
+            "matchDatasources": [
+                "maven"
+            ],
+            "matchPackageNames": [
+                "ch.ubique:uetlib-job"
+            ],
+            "replacementNameTemplate": "{{{replace '^ch[.]ubique:' 'ch.uetlib:' packageName}}}",
+            "replacementVersion": "6.0.1",
             "automerge": false
         },
         {
@@ -173,6 +243,84 @@
                 "/^ch\\.ubique\\.uetlib:uetlib.*$/"
             ],
             "replacementNameTemplate": "{{{replace '^ch[.]ubique[.]uetlib:' 'ch.uetlib:' packageName}}}",
+            "automerge": false
+        },
+        {
+            "description": "Migrate the recovered inotify library to its public coordinates",
+            "matchManagers": [
+                "maven"
+            ],
+            "matchDatasources": [
+                "maven"
+            ],
+            "matchPackageNames": [
+                "ch.ubique:inotify"
+            ],
+            "replacementName": "ch.uetlib:uetlib-inotify-java",
+            "replacementVersion": "3.0.1",
+            "automerge": false
+        },
+        {
+            "description": "Move Spring Boot geo integration into the geo repository",
+            "matchManagers": [
+                "maven"
+            ],
+            "matchDatasources": [
+                "maven"
+            ],
+            "matchPackageNames": [
+                "ch.ubique:uetlib-spring-boot-geo"
+            ],
+            "replacementName": "ch.uetlib:uetlib-geo-spring-boot",
+            "replacementVersion": "4.0.0",
+            "automerge": false
+        },
+        {
+            "description": "Rename intermediate Spring Boot geo coordinates while preserving their version",
+            "matchManagers": [
+                "maven"
+            ],
+            "matchDatasources": [
+                "maven"
+            ],
+            "matchPackageNames": [
+                "ch.ubique.uetlib:uetlib-spring-boot-geo",
+                "ch.uetlib:uetlib-spring-boot-geo"
+            ],
+            "replacementName": "ch.uetlib:uetlib-geo-spring-boot",
+            "automerge": false
+        },
+        {
+            "description": "Use the Spring Boot configuration-prefix migration release",
+            "matchManagers": [
+                "maven"
+            ],
+            "matchDatasources": [
+                "maven"
+            ],
+            "matchPackageNames": [
+                "ch.ubique.uetlib:uetlib-spring-boot-parent",
+                "ch.ubique.uetlib:uetlib-spring-boot",
+                "ch.ubique.uetlib:uetlib-spring-boot-security",
+                "ch.ubique.uetlib:uetlib-spring-boot-coverage"
+            ],
+            "replacementNameTemplate": "{{{replace '^ch[.]ubique[.]uetlib:' 'ch.uetlib:' packageName}}}",
+            "replacementVersion": "4.0.1",
+            "automerge": false
+        },
+        {
+            "description": "Use the storage Spring Boot configuration-prefix migration release",
+            "matchManagers": [
+                "maven"
+            ],
+            "matchDatasources": [
+                "maven"
+            ],
+            "matchPackageNames": [
+                "ch.ubique.uetlib:uetlib-storage-spring-boot"
+            ],
+            "replacementName": "ch.uetlib:uetlib-storage-spring-boot",
+            "replacementVersion": "3.0.1",
             "automerge": false
         }
     ]
