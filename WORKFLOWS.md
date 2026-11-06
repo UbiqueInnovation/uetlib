@@ -13,11 +13,11 @@ jobs:
     secrets: inherit
 ```
 
-The workflow uses runner Maven and Temurin Java 25 by default. Override `java-version` for Java 17 projects such as
-rewrite; `pom` defaults to `pom.xml`. Every authenticated build deploys its Maven artifacts to Artifactory using the normal Maven deploy plugin. Stable versions
+The workflow uses runner Maven and Temurin Java 25 by default, including for the OpenRewrite recipes.
+Use `java-version` to override the JDK when needed; `pom` defaults to `pom.xml`. Branch pushes and pull requests run `clean install` without deployment. Only tag refs deploy Maven artifacts to
+Artifactory using the normal Maven deploy plugin. Stable tag versions
 add `central-release` with `central.publishing.skipUpload=true`: an additional deploy-phase execution creates a bundle
-from the same signed artifacts. The workflow then uploads only that extra ZIP and its versioned descriptor to Artifactory. No individual repo uploads to Central. PR events run
-`clean install` without publishing credentials.
+from the same signed artifacts. The workflow then uploads only that extra ZIP and its versioned descriptor to Artifactory. No individual repo uploads to Central. Branch builds still use Artifactory to resolve dependencies when credentials are available.
 
 Artifactory secrets are `UB_ARTIFACTORY_USER`, `UB_ARTIFACTORY_PASSWORD`, `UB_ARTIFACTORY_URL` and
 `UB_ARTIFACTORY_REPO_UBIQUE`. The pinned s4u Maven settings action configures
@@ -72,3 +72,7 @@ updating their immutable pins and secret mappings.
 actionlint
 shellcheck enable-gh-settings.sh
 ```
+
+Bundle deployment uses three Maven attempts and verifies the uploaded ZIP checksum plus manifest and POM.
+A manifest/POM without a ZIP is incomplete. The original ZIP and manifest are retained as a
+`central-bundle-<run-attempt>` workflow artifact, including when the Artifactory upload fails.
