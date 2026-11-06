@@ -105,7 +105,7 @@ jobs:
           cache: maven
           cache-dependency-path: "**/pom.xml"
           overwrite-settings: false
-          gpg-private-key: ${{ github.event_name != 'pull_request' && github.event_name != 'pull_request_target' && secrets.SYSTEMS_UBIQUE_SIGNING_KEY_ARMOR_ASC || '' }}
+          gpg-private-key: ${{ github.ref_type == 'tag' && github.event_name != 'pull_request' && github.event_name != 'pull_request_target' && secrets.SYSTEMS_UBIQUE_SIGNING_KEY_ARMOR_ASC || '' }}
           gpg-passphrase-env-var: MAVEN_GPG_PASSPHRASE
 
       # s4u skips empty settings inputs.
@@ -131,7 +131,7 @@ jobs:
             ]
 
       - name: Set release version
-        if: ${{ inputs.release-version != '' }}
+        if: ${{ github.ref_type == 'tag' && inputs.release-version != '' }}
         env:
           POM: ${{ inputs.pom }}
           VERSION: ${{ inputs.release-version }}
@@ -140,15 +140,15 @@ jobs:
         run: |
           mvn --batch-mode --no-transfer-progress -f "$POM" org.codehaus.mojo:versions-maven-plugin:2.21.0:set "-DnewVersion=$VERSION" -DprocessAllModules=true -DgenerateBackupPoms=false
 
-      - name: Build and test pull request
-        if: ${{ github.event_name == 'pull_request' || github.event_name == 'pull_request_target' }}
+      - name: Build and test
+        if: ${{ github.ref_type != 'tag' || github.event_name == 'pull_request' || github.event_name == 'pull_request_target' }}
         env:
           POM: ${{ inputs.pom }}
         run: mvn --batch-mode --no-transfer-progress -f "$POM" clean install
 
-      - name: Build, test and publish to Artifactory
+      - name: Build, test and publish tag to Artifactory
         id: maven
-        if: ${{ github.event_name != 'pull_request' && github.event_name != 'pull_request_target' }}
+        if: ${{ github.ref_type == 'tag' && github.event_name != 'pull_request' && github.event_name != 'pull_request_target' }}
         env:
           POM: ${{ inputs.pom }}
           MAVEN_GPG_KEY: ${{ secrets.SYSTEMS_UBIQUE_SIGNING_KEY_ARMOR_ASC }}
@@ -167,10 +167,10 @@ jobs:
             echo "central_bundle=true" >> "$GITHUB_OUTPUT"
             release_args=(-Pcentral-release -Dcentral.publishing.skipUpload=true)
           fi
-          mvn --batch-mode --no-transfer-progress -f "$POM" "${release_args[@]}" clean deploy "-DaltDeploymentRepository=ubique-artifactory-virtual::$ARTIFACTORY_URL"
+          mvn --batch-mode --no-transfer-progress -f "$POM" "${release_args[@]}" clean deploy "-DaltDeploymentRepository=ubique-artifactory-virtual::$ARTIFACTORY_URL" -DretryFailedDeploymentCount=3
 
       - name: Store completed Central bundle in Artifactory
-        if: ${{ steps.maven.outputs.central_bundle == 'true' }}
+        if: ${{ github.ref_type == 'tag' && steps.maven.outputs.central_bundle == 'true' }}
         env:
           POM: ${{ inputs.pom }}
           MAVEN_USERNAME: ${{ secrets.UB_ARTIFACTORY_USER }}
@@ -200,21 +200,47 @@ jobs:
           manifest = bundle.with_name('manifest.json')
           manifest.write_text(json.dumps({'repository': os.environ['GITHUB_REPOSITORY'], 'commit': os.environ['GITHUB_SHA'], 'version': version, 'sha256': hashlib.sha256(bundle.read_bytes()).hexdigest(), 'files': files}, indent=2) + '\n')
           repo = os.environ['GITHUB_REPOSITORY'].split('/')[1]
-          # A completed bundle coordinate is immutable; never replace its receipt or signatures.
+          # A manifest alone is not a completed deployment: the ZIP may have failed.
           bundle_path = 'ch/uetlib/central-bundles/' + repo + '/' + version + '/' + repo + '-' + version
-          try:
-              with urllib.request.urlopen(urllib.request.Request(base + '/' + bundle_path + '-manifest.json', headers={'Authorization': 'Basic ' + auth})) as response:
-                  previous = json.load(response)
-              if previous != json.loads(manifest.read_text()):
-                  raise SystemExit('Bundle version already exists; choose a new release version')
-              raise SystemExit(0)
-          except urllib.error.HTTPError as error:
-              if error.code != 404:
+          def fetch_remote(suffix):
+              try:
+                  with urllib.request.urlopen(urllib.request.Request(base + '/' + bundle_path + suffix, headers={'Authorization': 'Basic ' + auth}), timeout=120) as response:
+                      return response.read()
+              except urllib.error.HTTPError as error:
+                  if error.code == 404:
+                      return None
                   raise
+          expected = json.loads(manifest.read_text())
+          def completed_upload():
+              receipt = fetch_remote('-manifest.json')
+              if receipt is not None and json.loads(receipt) != expected:
+                  raise SystemExit('Bundle version already exists with a different manifest; reuse the original bundle or choose a new version')
+              uploaded = fetch_remote('.zip')
+              if uploaded is not None and hashlib.sha256(uploaded).hexdigest() != expected['sha256']:
+                  raise SystemExit('Remote bundle checksum mismatch; refusing to replace an existing release')
+              return receipt is not None and uploaded is not None and fetch_remote('.pom') is not None
+          if completed_upload():
+              print('Bundle, manifest and Maven POM are already uploaded and verified')
+              raise SystemExit(0)
           publisher_pom = bundle.with_name('publisher-pom.xml')
           publisher_pom.write_text('<project><modelVersion>4.0.0</modelVersion><groupId>ch.uetlib.central-bundles</groupId><artifactId>publisher</artifactId><version>1</version></project>')
-          subprocess.run(['mvn', '--batch-mode', '--no-transfer-progress', '--non-recursive', '-f', str(publisher_pom), 'org.apache.maven.plugins:maven-deploy-plugin:3.1.4:deploy-file', '-DrepositoryId=ubique-artifactory-virtual', '-Durl=' + base, '-DgroupId=ch.uetlib.central-bundles', '-DartifactId=' + repo, '-Dversion=' + version, '-Dpackaging=zip', '-Dfile=' + str(bundle), '-Dfiles=' + str(manifest), '-Dclassifiers=manifest', '-Dtypes=json', '-DgeneratePom=true'], check=True)
+          subprocess.run(['mvn', '--batch-mode', '--no-transfer-progress', '--non-recursive', '-f', str(publisher_pom), 'org.apache.maven.plugins:maven-deploy-plugin:3.1.4:deploy-file', '-DretryFailedDeploymentCount=3', '-DrepositoryId=ubique-artifactory-virtual', '-Durl=' + base, '-DgroupId=ch.uetlib.central-bundles', '-DartifactId=' + repo, '-Dversion=' + version, '-Dpackaging=zip', '-Dfile=' + str(bundle), '-Dfiles=' + str(manifest), '-Dclassifiers=manifest', '-Dtypes=json', '-DgeneratePom=true'], check=True)
+          if not completed_upload():
+              raise SystemExit('Central bundle deployment is incomplete: ZIP, manifest and Maven POM must all exist')
+          print('Bundle ZIP checksum, manifest and Maven POM verified in Artifactory')
           PYTHON
+
+      - name: Preserve Central bundle for upload recovery
+        if: ${{ always() && github.ref_type == 'tag' && steps.maven.outputs.central_bundle == 'true' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: central-bundle-${{ github.run_attempt }}
+          path: |
+            **/target/central-publishing/central-bundle.zip
+            **/target/central-publishing/manifest.json
+            **/target/central-publishing/publisher-pom.xml
+          if-no-files-found: ignore
+          compression-level: 0
 
       - name: Cache SonarCloud packages
         if: ${{ inputs.sonar }}
