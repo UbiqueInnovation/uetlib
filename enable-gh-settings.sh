@@ -10,6 +10,7 @@ set -euo pipefail
 #  6) Sync "protect main/release" from UbiqueInnovation/uetlib-core
 #  7) Protect v* tags from updates and deletion (writers can still create tags)
 #  8) Enable signed-commit enforcement and require the DCO App check on main/release
+#  9) Allow merge commits only (disable squash and rebase merging)
 #
 # For every repo directory under ROOT_DIR (default: current directory).
 #
@@ -164,6 +165,29 @@ check_delete_branch_on_merge() {
   fi
 }
 
+sync_merge_methods() {
+  local owner_repo="$1"
+  local current desired result
+  desired='{"allow_merge_commit":true,"allow_rebase_merge":false,"allow_squash_merge":false}'
+  current="$(gh api "repos/$owner_repo" --jq '{allow_merge_commit, allow_rebase_merge, allow_squash_merge}' | jq -cS .)" || return 1
+  if [[ "$current" == "$desired" ]]; then
+    note "  - merge methods: merge commits only (already configured)"
+    return 0
+  fi
+  if [[ "$DRY_RUN" == "true" ]]; then
+    note "  - merge methods: DRY RUN (would allow merge commits only)"
+    return 0
+  fi
+  result="$(gh api -X PATCH "repos/$owner_repo" \
+    -F allow_merge_commit=true -F allow_rebase_merge=false -F allow_squash_merge=false \
+    --jq '{allow_merge_commit, allow_rebase_merge, allow_squash_merge}' | jq -cS .)" || return 1
+  if [[ "$result" != "$desired" ]]; then
+    err "$owner_repo merge method verification failed."
+    return 1
+  fi
+  note "  - merge methods: merge commits only, verified"
+}
+
 ruleset_payload() {
   jq -cS '{name, target, enforcement, conditions, rules, bypass_actors}'
 }
@@ -212,6 +236,29 @@ sync_ruleset() {
   note "  - $name: synced and verified"
 }
 
+remove_redundant_main_ruleset() {
+  local owner_repo="$1"
+  local rulesets retained_id old_id
+  rulesets="$(gh api "repos/$owner_repo/rulesets" --paginate --slurp)" || return 1
+  retained_id="$(printf '%s' "$rulesets" | jq -r '
+    [.[][] | select(.source_type == "Repository" and .target == "branch" and
+      .name == "protect main/release" and .enforcement == "active")] |
+    if length == 1 then .[0].id else empty end
+  ')" || return 1
+  [[ -n "$retained_id" ]] || return 0
+  old_id="$(printf '%s' "$rulesets" | jq -r '
+    .[][] | select(.source_type == "Repository" and .target == "branch" and .name == "protect main") | .id
+  ')" || return 1
+  for old_id in $old_id; do
+    if [[ "$DRY_RUN" == "true" ]]; then
+      note "  - protect main: DRY RUN (would delete redundant ruleset $old_id)"
+    else
+      gh api -X DELETE "repos/$owner_repo/rulesets/$old_id" || return 1
+      note "  - protect main: deleted redundant ruleset $old_id"
+    fi
+  done
+}
+
 # --- preflight ---
 command -v gh >/dev/null 2>&1 || { err "gh CLI not found. Install it (brew install gh)."; exit 1; }
 command -v jq >/dev/null 2>&1 || { err "jq not found. Install it (brew install jq)."; exit 1; }
@@ -227,6 +274,45 @@ reference_id="$(printf '%s' "$reference_ids" | jq -r '.[0]')"
 branch_ruleset="$(gh api "repos/UbiqueInnovation/uetlib-core/rulesets/$reference_id" | ruleset_payload)" || {
   err "Cannot read the reference branch ruleset."
   exit 1
+}
+
+# Reusable Maven workflows report the caller job and called job together.
+branch_ruleset="$(printf '%s' "$branch_ruleset" | jq -cS '
+  (.rules[] | select(.type == "required_status_checks") | .parameters.required_status_checks[] |
+    select(.context == "Build Project" or .context == "Build Project / Build Project") | .context) = "Build Project / Build Project"
+')"
+
+sync_build_status_checks() {
+  local owner_repo="$1"
+  local expected="Build Project / Build Project"
+  local ids id current desired
+  # The entry repository has a direct lint job rather than a reusable Maven job.
+  if [[ "$owner_repo" == "UbiqueInnovation/uetlib" ]]; then
+    expected="Build Project"
+  fi
+  ids="$(gh api "repos/$owner_repo/rulesets" --paginate --slurp | jq -r '
+    .[][] | select(.source_type == "Repository" and .target == "branch" and
+      (.name == "protect main" or .name == "protect main/release")) | .id
+  ')" || return 1
+  for id in $ids; do
+    current="$(gh api "repos/$owner_repo/rulesets/$id" | ruleset_payload)" || return 1
+    desired="$(printf '%s' "$current" | jq -cS --arg expected "$expected" '
+      (.rules[] | select(.type == "required_status_checks") | .parameters.required_status_checks[] |
+        select(.context == "Build Project" or .context == "Build Project / Build Project") | .context) = $expected |
+      if any(.rules[] | select(.type == "required_status_checks") |
+        .parameters.required_status_checks[]; .context == $expected) then .
+      elif any(.rules[]; .type == "required_status_checks") then
+        (.rules[] | select(.type == "required_status_checks") | .parameters.required_status_checks) +=
+          [{context: $expected, integration_id: 15368}]
+      else .rules += [{type: "required_status_checks", parameters: {
+        strict_required_status_checks_policy: false, do_not_enforce_on_create: false,
+        required_status_checks: [{context: $expected, integration_id: 15368}]
+      }}] end
+    ')" || return 1
+    if [[ "$current" != "$desired" ]]; then
+      sync_ruleset "$owner_repo" "$desired" || return 1
+    fi
+  done
 }
 
 # Keep contributor requirements separate from the copied baseline; no admin bypass.
@@ -311,9 +397,21 @@ for d in "$ROOT_DIR"/*/; do
     continue
   fi
 
+  if ! owner_repo="$(gh api "repos/$owner_repo" --jq '.full_name')"; then
+    failed_ops=$((failed_ops + 1))
+    other_errors+=("$repo_dir (cannot resolve canonical repository name)")
+    continue
+  fi
+
   processed=$((processed + 1))
   note ""
   note "==> [$processed] $owner_repo"
+
+  # --- 9) Preserve original signed commits by allowing merge commits only ---
+  if ! sync_merge_methods "$owner_repo"; then
+    failed_ops=$((failed_ops + 1))
+    other_errors+=("$owner_repo (merge methods): sync failed; see output above")
+  fi
 
   # --- 1) Immutable releases: enable ---
   immutable_status=2
@@ -581,10 +679,27 @@ for d in "$ROOT_DIR"/*/; do
   fi
 
   # --- 6) Sync the branch ruleset, preserving unrelated rulesets ---
-  if ! sync_ruleset "$owner_repo" "$branch_ruleset"; then
+  repo_branch_ruleset="$branch_ruleset"
+  if [[ "$owner_repo" == "UbiqueInnovation/uetlib" ]]; then
+    repo_branch_ruleset="$(printf '%s' "$branch_ruleset" | jq -cS '
+      (.rules[] | select(.type == "required_status_checks") | .parameters.required_status_checks[] |
+        select(.context == "Build Project / Build Project") | .context) = "Build Project"
+    ')"
+  fi
+  if ! sync_ruleset "$owner_repo" "$repo_branch_ruleset"; then
     failed_ops=$((failed_ops + 1))
     other_errors+=("$owner_repo (protect main/release): sync failed; see output above")
     note "  - protect main/release: FAILED"
+  fi
+
+  if ! sync_build_status_checks "$owner_repo"; then
+    failed_ops=$((failed_ops + 1))
+    other_errors+=("$owner_repo (build status check names)")
+  fi
+
+  if ! remove_redundant_main_ruleset "$owner_repo"; then
+    failed_ops=$((failed_ops + 1))
+    other_errors+=("$owner_repo (remove redundant protect main ruleset)")
   fi
 
   # --- 8) Enable signature enforcement and require DCO sign-offs ---
