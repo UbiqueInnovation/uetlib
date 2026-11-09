@@ -20,7 +20,7 @@
             ]
         },
         {
-            "description": "Target the first public migration release",
+            "description": "Target the current public migration release",
             "matchManagers": [
                 "maven"
             ],
@@ -31,11 +31,11 @@
                 "ch.ubique:uetlib-errorprone"
             ],
             "replacementNameTemplate": "{{{replace '^ch[.]ubique:' 'ch.uetlib:' packageName}}}",
-            "replacementVersion": "0.1.0",
+            "replacementVersion": "0.1.1",
             "automerge": false
         },
         {
-            "description": "Target the first public migration release",
+            "description": "Target the current public migration release",
             "matchManagers": [
                 "maven"
             ],
@@ -46,11 +46,11 @@
                 "ch.ubique:uetlib-webp"
             ],
             "replacementNameTemplate": "{{{replace '^ch[.]ubique:' 'ch.uetlib:' packageName}}}",
-            "replacementVersion": "1.0.0",
+            "replacementVersion": "1.0.1",
             "automerge": false
         },
         {
-            "description": "Target the first public migration release",
+            "description": "Target the current public migration release",
             "matchManagers": [
                 "maven"
             ],
@@ -61,11 +61,11 @@
                 "ch.ubique:uetlib-testapp"
             ],
             "replacementNameTemplate": "{{{replace '^ch[.]ubique:' 'ch.uetlib:' packageName}}}",
-            "replacementVersion": "2.0.0",
+            "replacementVersion": "2.0.1",
             "automerge": false
         },
         {
-            "description": "Target the first public migration release",
+            "description": "Target the current public migration release",
             "matchManagers": [
                 "maven"
             ],
@@ -76,11 +76,11 @@
                 "ch.ubique:uetlib-bom"
             ],
             "replacementNameTemplate": "{{{replace '^ch[.]ubique:' 'ch.uetlib:' packageName}}}",
-            "replacementVersion": "2026.11.3",
+            "replacementVersion": "2026.11.4",
             "automerge": false
         },
         {
-            "description": "Target the first public migration release",
+            "description": "Target the current public migration release",
             "matchManagers": [
                 "maven"
             ],
@@ -91,11 +91,11 @@
                 "ch.ubique:uetlib-parent"
             ],
             "replacementNameTemplate": "{{{replace '^ch[.]ubique:' 'ch.uetlib:' packageName}}}",
-            "replacementVersion": "2026.11.0",
+            "replacementVersion": "2026.11.1",
             "automerge": false
         },
         {
-            "description": "Target the first public migration release",
+            "description": "Target the current public migration release",
             "matchManagers": [
                 "maven"
             ],
@@ -129,11 +129,11 @@
                 "ch.ubique:uetlib-testcontainers-redis"
             ],
             "replacementNameTemplate": "{{{replace '^ch[.]ubique:' 'ch.uetlib:' packageName}}}",
-            "replacementVersion": "3.0.0",
+            "replacementVersion": "3.0.1",
             "automerge": false
         },
         {
-            "description": "Target the first public migration release",
+            "description": "Target the current public migration release",
             "matchManagers": [
                 "maven"
             ],
@@ -145,11 +145,11 @@
                 "ch.ubique:uetlib-storage-spring-boot"
             ],
             "replacementNameTemplate": "{{{replace '^ch[.]ubique:' 'ch.uetlib:' packageName}}}",
-            "replacementVersion": "3.0.1",
+            "replacementVersion": "3.0.2",
             "automerge": false
         },
         {
-            "description": "Target the first public migration release",
+            "description": "Target the current public migration release",
             "matchManagers": [
                 "maven"
             ],
@@ -165,11 +165,11 @@
                 "ch.ubique:uetlib-geo-spring-boot"
             ],
             "replacementNameTemplate": "{{{replace '^ch[.]ubique:' 'ch.uetlib:' packageName}}}",
-            "replacementVersion": "4.0.0",
+            "replacementVersion": "4.0.3",
             "automerge": false
         },
         {
-            "description": "Target the first public migration release",
+            "description": "Target the current public migration release",
             "matchManagers": [
                 "maven"
             ],
@@ -183,11 +183,11 @@
                 "ch.ubique:uetlib-spring-boot-security"
             ],
             "replacementNameTemplate": "{{{replace '^ch[.]ubique:' 'ch.uetlib:' packageName}}}",
-            "replacementVersion": "4.0.1",
+            "replacementVersion": "4.0.2",
             "automerge": false
         },
         {
-            "description": "Target the first public migration release",
+            "description": "Target the current public migration release",
             "matchManagers": [
                 "maven"
             ],
@@ -198,11 +198,11 @@
                 "ch.ubique:uetlib-spring-boot-starter-parent"
             ],
             "replacementNameTemplate": "{{{replace '^ch[.]ubique:' 'ch.uetlib:' packageName}}}",
-            "replacementVersion": "4.1.1-2026.11.0",
+            "replacementVersion": "4.1.1-2026.11.1",
             "automerge": false
         },
         {
-            "description": "Target the first public migration release",
+            "description": "Target the current public migration release",
             "matchManagers": [
                 "maven"
             ],
@@ -213,11 +213,11 @@
                 "ch.ubique:uetlib-self-bom"
             ],
             "replacementNameTemplate": "{{{replace '^ch[.]ubique:' 'ch.uetlib:' packageName}}}",
-            "replacementVersion": "6.0.0",
+            "replacementVersion": "6.0.1",
             "automerge": false
         },
         {
-            "description": "Target the first public migration release",
+            "description": "Target the current public migration release",
             "matchManagers": [
                 "maven"
             ],
@@ -228,7 +228,7 @@
                 "ch.ubique:uetlib-job"
             ],
             "replacementNameTemplate": "{{{replace '^ch[.]ubique:' 'ch.uetlib:' packageName}}}",
-            "replacementVersion": "6.0.1",
+            "replacementVersion": "6.0.2",
             "automerge": false
         },
         {
@@ -257,7 +257,7 @@
                 "ch.ubique:inotify"
             ],
             "replacementName": "ch.uetlib:uetlib-inotify-java",
-            "replacementVersion": "3.0.1",
+            "replacementVersion": "3.0.2",
             "automerge": false
         },
         {
@@ -272,7 +272,7 @@
                 "ch.ubique:uetlib-spring-boot-geo"
             ],
             "replacementName": "ch.uetlib:uetlib-geo-spring-boot",
-            "replacementVersion": "4.0.0",
+            "replacementVersion": "4.0.3",
             "automerge": false
         },
         {
@@ -305,7 +305,7 @@
                 "ch.ubique.uetlib:uetlib-spring-boot-coverage"
             ],
             "replacementNameTemplate": "{{{replace '^ch[.]ubique[.]uetlib:' 'ch.uetlib:' packageName}}}",
-            "replacementVersion": "4.0.1",
+            "replacementVersion": "4.0.2",
             "automerge": false
         },
         {
@@ -320,7 +320,7 @@
                 "ch.ubique.uetlib:uetlib-storage-spring-boot"
             ],
             "replacementName": "ch.uetlib:uetlib-storage-spring-boot",
-            "replacementVersion": "3.0.1",
+            "replacementVersion": "3.0.2",
             "automerge": false
         }
     ]

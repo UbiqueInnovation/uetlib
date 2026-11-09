@@ -1,6 +1,7 @@
 # Stage independently, publish one batch
 
-Each library builds in its own repository. `mvn-install.yml` builds/tests branch pushes and pull requests with `clean install`.
+Each library builds in its own repository. `mvn-install.yml` builds/tests branch pushes and pull requests with
+`clean install`.
 Only tag refs deploy to Artifactory using normal Maven deployment for JARs/POMs and attached artifacts.
 Stable versions additionally activate `central-release` with `central.publishing.skipUpload=true`: an explicit
 deploy-phase execution creates the Central bundle from those same signed artifacts without replacing the normal
@@ -13,7 +14,8 @@ ch.uetlib.central-bundles:<repository>:<version>:json:manifest
 
 The descriptor records the Git commit and SHA-256 of the ZIP and every contained file. It is generated only after
 the reactor finishes successfully. A network failure can leave a descriptor/POM without a ZIP; neither the descriptor
-nor Maven metadata alone establishes a complete deployment. The upload step verifies all three files and the ZIP hash. Existing release files cannot be overwritten with different bytes. Use a new version
+nor Maven metadata alone establishes a complete deployment. The upload step verifies all three files and the ZIP hash.
+Existing release files cannot be overwritten with different bytes. Use a new version
 for a rebuilt release, including changed signatures. Snapshot versions are never candidates for Central. Hyphenated
 prereleases stay in Artifactory; the numeric starter-parent format remains stable.
 
@@ -24,7 +26,8 @@ that immutable SHA. Their existing `mvn-publish.yml` calls now stage tagged vers
 rather than uploading to Central individually. GitHub releases describe staged versions; they do not establish Central
 availability.
 
-Build callers must pass the Artifactory secrets, and stable tag builds also need the signing key and passphrase. For callers
+Build callers must pass the Artifactory secrets, and stable tag builds also need the signing key and passphrase. For
+callers
 with an explicitly mapped Sonar token, extend the mapping:
 
 ```yaml
@@ -54,12 +57,13 @@ permissions to prevent release redeployment as well.
 The initial entries are planned versions, not claims that bundles already exist. Remove entries not ready for the first
 batch; missing bundles fail assembly.
 
-The entry repo's custom Renovate manager reads those versions using the Maven datasource, querying only completed
-`ch.uetlib.central-bundles` artifacts. All changes are grouped into one PR without automerge. Numeric starter-parent
+The entry repo's custom Renovate manager reads those versions using the Maven datasource, querying version metadata for
+`ch.uetlib.central-bundles` artifacts. Batch assembly verifies that each selected bundle is complete. All changes are
+grouped into one PR without automerge. Numeric starter-parent
 versions are allowed alongside plain release versions; snapshots and other prereleases are excluded. Review dependency
 compatibility when merging updates.
 
-The configured registry is `https://artifactory.ubique.ch/artifactory/backend`. Adjust it if the staging repository
+The configured registry is `https://artifactory.ubique.ch/artifactory/ubique`. Adjust it if the staging repository
 differs. Renovate needs its own read credentials for that registry, supplied via its existing bot/hostRules
 configuration; Actions secrets do not automatically authenticate Renovate. Do not put credentials in this public preset.
 
