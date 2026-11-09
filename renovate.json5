@@ -1,37 +1,44 @@
 {
-  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": [
-    "github>UbiqueInnovation/uetlib:renovate-base.json5",
-    ":gitSignOff"
-  ],
-  "customManagers": [
-    {
-      "customType": "regex",
-      "managerFilePatterns": [
-        "/^central-release\\.json$/"
-      ],
-      "matchStrings": [
-        "\"(?<depName>uetlib-[a-z0-9-]+)\":\\s*\"(?<currentValue>[^\"\\s]+)\""
-      ],
-      "datasourceTemplate": "maven",
-      "packageNameTemplate": "ch.uetlib.central-bundles:{{{depName}}}",
-      "registryUrlTemplate": "https://artifactory.ubique.ch/artifactory/backend",
-      "versioningTemplate": "maven"
-    }
-  ],
-  "packageRules": [
-    {
-      "matchDatasources": [
-        "maven"
-      ],
-      "matchPackageNames": [
-        "/^ch\\.uetlib\\.central-bundles:/"
-      ],
-      "groupName": "Central release batch",
-      "automerge": false,
-      "minimumReleaseAge": "0 days",
-      "ignoreUnstable": false,
-      "allowedVersions": "/^\\d+\\.\\d+\\.\\d+(?:-\\d{4}\\.\\d+\\.\\d+)?$/"
-    }
-  ]
+    "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+    "extends": [
+        "github>UbiqueInnovation/uetlib:renovate-base.json5",
+        ":gitSignOff"
+    ],
+    "customManagers": [
+        {
+            "customType": "regex",
+            "managerFilePatterns": [
+                "/^central-release\\.json$/"
+            ],
+            "matchStrings": [
+                "\"(?<depName>uetlib-[a-z0-9-]+)\":\\s*\"(?<currentValue>[^\"\\s]+)\""
+            ],
+            "datasourceTemplate": "maven",
+            "packageNameTemplate": "ch.uetlib.central-bundles:{{{depName}}}",
+            "registryUrlTemplate": "https://artifactory.ubique.ch/artifactory/ubique",
+            "versioningTemplate": "maven"
+        }
+    ],
+    "packageRules": [
+        {
+            "matchDatasources": [
+                "maven"
+            ],
+            "matchPackageNames": [
+                "/^ch\\.uetlib\\.central-bundles:/"
+            ],
+            "groupName": "Central release batch",
+            "automerge": false,
+            "minimumReleaseAge": "0 days",
+            "ignoreUnstable": false,
+            "allowedVersions": "/^\\d+\\.\\d+\\.\\d+(?:-\\d{4}\\.\\d+\\.\\d+)?$/"
+        }
+    ],
+    "hostRules": [
+        {
+            "matchHost": "https://artifactory.ubique.ch/",
+            "username": "mend-renovate",
+            "token": "{{ secrets.UBIQUE_ARTIFACTORY_TOKEN }}"
+        }
+    ]
 }
