@@ -20,14 +20,15 @@ Artifactory is not declared in the public POMs.
 
 - [ ] TODO: Install the [DCO GitHub App](https://github.com/apps/dco) for every uetlib repository, then rerun
   `enable-gh-settings.sh` to require the app-bound `DCO` check on default/release branches without bypass actors.
-  Signed-commit enforcement is temporarily disabled to allow GitHub rebase merges; rerunning the script when ready to
-  merge re-enables it. Verify both protections and confirm that a PR missing sign-offs is blocked. Install the app
+  Signed-commit enforcement is temporarily disabled; rerunning the script when ready to merge re-enables it.
+  Only merge commits are offered, preserving the original signed commits. Verify both protections and confirm that a PR
+  missing sign-offs is blocked. Install the app
   before enabling its required check so PRs do not wait for a check that cannot run.
 
 ## Before publication
 
-- Finish the separate source/history leak review and review third-party attribution, especially the geo schemas, legacy
-  Logback SQL resources and WebP test images/native dependencies.
+- Finish the separate source/history leak review and review third-party attribution, especially the geo schemas and WebP
+  test images/native dependencies.
 - Configure Central namespace access, scoped organization signing/publishing secrets and the protected `maven-central`
   environment.
 - Release the shared workflows, then replace library CI/release callers with the pinned workflow SHA and matching

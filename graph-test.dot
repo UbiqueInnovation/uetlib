@@ -37,8 +37,8 @@ digraph G {
     "uetlib-storage" -> "uetlib-testcontainers" [label="managed, test", color="#9333ea", tooltip="uetlib-storage → uetlib-testcontainers\nuetlib-storage → uetlib-testcontainers"];
     "uetlib-storage-spring-boot" -> "uetlib-testcontainers" [label="managed, test", color="#9333ea", tooltip="uetlib-storage-spring-boot → uetlib-testcontainers-postgresql\nuetlib-storage-spring-boot → uetlib-testcontainers-postgresql"];
     "uetlib-test" -> "uetlib-parent" [label="parent", color="#64748b", tooltip="uetlib-test → uetlib-parent", style="dashed"];
+    "uetlib-testapp" -> "uetlib-geo" [label="dependency", color="#2563eb", tooltip="uetlib-testapp → uetlib-geo-spring-boot"];
     "uetlib-testapp" -> "uetlib-job" [label="dependency", color="#2563eb", tooltip="uetlib-testapp → uetlib-job"];
-    "uetlib-testapp" -> "uetlib-spring-boot" [label="dependency", color="#2563eb", tooltip="uetlib-testapp → uetlib-spring-boot-geo"];
     "uetlib-testapp" -> "uetlib-spring-boot-starter-parent" [label="parent", color="#64748b", tooltip="uetlib-testapp → uetlib-spring-boot-starter-parent", style="dashed"];
     "uetlib-testcontainers" -> "uetlib-parent" [label="parent", color="#64748b", tooltip="uetlib-testcontainers-parent → uetlib-parent", style="dashed"];
     "uetlib-testcontainers" -> "uetlib-test" [label="dependency, managed", color="#2563eb", tooltip="uetlib-testcontainers-parent → uetlib-test\nuetlib-testcontainers-parent → uetlib-test"];

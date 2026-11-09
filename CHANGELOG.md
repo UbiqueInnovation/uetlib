@@ -2,6 +2,14 @@
 
 ## 1.0.0
 
+- Verify bundle ZIP/manifest/POM completion, retry transfers and retain the original bundle for recovery.
+
+- Rename uetlib configuration keys and property references to `ch.uetlib.*`, including Spring bindings, `@Value`, conditions, scheduling expressions and configuration files. Migrate external deployment configuration as well.
+
+- Move `uetlib-spring-boot-geo` into the geo repository as `uetlib-geo-spring-boot`, with packages under `ch.uetlib.geo.spring.boot`; update consumers and migration mappings. This removes the repo-level release-order cycle between geo, job and Spring Boot.
+
+- Replace `ch.ubique:inotify` with `ch.uetlib:uetlib-inotify-java:3.0.1` in the Renovate migration preset.
+
 - Add a repository dependency graph without test dependencies or testing repositories.
 
 - Resolve Central bundle upload paths absolutely so Maven handles root and nested POMs correctly.
