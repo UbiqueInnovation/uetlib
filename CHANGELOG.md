@@ -4,9 +4,12 @@
 
 - Verify bundle ZIP/manifest/POM completion, retry transfers and retain the original bundle for recovery.
 
-- Rename uetlib configuration keys and property references to `ch.uetlib.*`, including Spring bindings, `@Value`, conditions, scheduling expressions and configuration files. Migrate external deployment configuration as well.
+- Rename uetlib configuration keys and property references to `ch.uetlib.*`, including Spring bindings, `@Value`,
+  conditions, scheduling expressions and configuration files. Migrate external deployment configuration as well.
 
-- Move `uetlib-spring-boot-geo` into the geo repository as `uetlib-geo-spring-boot`, with packages under `ch.uetlib.geo.spring.boot`; update consumers and migration mappings. This removes the repo-level release-order cycle between geo, job and Spring Boot.
+- Move `uetlib-spring-boot-geo` into the geo repository as `uetlib-geo-spring-boot`, with packages under
+  `ch.uetlib.geo.spring.boot`; update consumers and migration mappings. This removes the repo-level release-order cycle
+  between geo, job and Spring Boot.
 
 - Replace `ch.ubique:inotify` with `ch.uetlib:uetlib-inotify-java:3.0.1` in the Renovate migration preset.
 
@@ -18,11 +21,6 @@
 
 - Regenerate repository dependency graphs from Maven POMs and list inotify, Error Prone and OpenRewrite on the project
   page.
-
-- Deploy all versions to Artifactory with Maven; stable releases additionally create and store a Central bundle.
-
-- Create Maven settings with the pinned s4u action, configuring the Artifactory virtual repository and its server
-  credentials.
 
 - Move Java packages and class references from `ch.ubique.uetlib` to `ch.uetlib`.
 
@@ -41,7 +39,6 @@ First Public release.
 
 - Add reusable Maven install and Central publishing workflows with Java 25 by default, scoped organization secrets,
   release validation and local staging/signing.
-- Add workflow tests and CI for the required `Build Project` check.
 
 - Prepare the public `ch.uetlib` Maven coordinate migration and target its planned major releases in Renovate
   replacement PRs.
