@@ -14,14 +14,20 @@ jobs:
 ```
 
 The workflow uses runner Maven and Temurin Java 25 by default, including for the OpenRewrite recipes.
-Use `java-version` to override the JDK when needed; `pom` defaults to `pom.xml`. Branch pushes and pull requests run `clean install` without deployment. Only tag refs deploy Maven artifacts to
+Both CI build commands pass `-Dspotless.apply.skip=true`, so Spotless checks fail on formatting violations instead of
+formatting them first. Local builds retain automatic formatting configured by the parent POMs.
+Use `java-version` to override the JDK when needed; `pom` defaults to `pom.xml`. Branch pushes and pull requests run
+`clean install` without deployment. Only tag refs deploy Maven artifacts to
 Artifactory using the normal Maven deploy plugin. Stable tag versions
 add `central-release` with `central.publishing.skipUpload=true`: an additional deploy-phase execution creates a bundle
-from the same signed artifacts. The workflow then uploads only that extra ZIP and its versioned descriptor to Artifactory. No individual repo uploads to Central. Branch builds still use Artifactory to resolve dependencies when credentials are available.
+from the same signed artifacts. The workflow then uploads only that extra ZIP and its versioned descriptor to
+Artifactory. No individual repo uploads to Central. Branch builds still use Artifactory to resolve dependencies when
+credentials are available.
 
 Artifactory secrets are `UB_ARTIFACTORY_USER`, `UB_ARTIFACTORY_PASSWORD`, `UB_ARTIFACTORY_URL` and
 `UB_ARTIFACTORY_REPO_UBIQUE`. The pinned s4u Maven settings action configures
-`ubique-artifactory-virtual` for dependency resolution with its server credentials. Build plugins use Maven's default plugin repositories.
+`ubique-artifactory-virtual` for dependency resolution with its server credentials. Build plugins use Maven's default
+plugin repositories.
 Stable versions also require `SYSTEMS_UBIQUE_SIGNING_KEY_ARMOR_ASC` and
 `SYSTEMS_UBIQUE_SIGNING_KEY_PASSPHRASE`. No signing key ID is needed. These must be available in the calling repository;
 an

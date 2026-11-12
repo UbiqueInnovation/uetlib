@@ -144,7 +144,7 @@ jobs:
         if: ${{ github.ref_type != 'tag' || github.event_name == 'pull_request' || github.event_name == 'pull_request_target' }}
         env:
           POM: ${{ inputs.pom }}
-        run: mvn --batch-mode --no-transfer-progress -f "$POM" clean install
+        run: mvn --batch-mode --no-transfer-progress -f "$POM" clean install -Dspotless.apply.skip=true
 
       - name: Build, test and publish tag to Artifactory
         id: maven
@@ -167,7 +167,7 @@ jobs:
             echo "central_bundle=true" >> "$GITHUB_OUTPUT"
             release_args=(-Pcentral-release -Dcentral.publishing.skipUpload=true)
           fi
-          mvn --batch-mode --no-transfer-progress -f "$POM" "${release_args[@]}" clean deploy "-DaltDeploymentRepository=ubique-artifactory-virtual::$ARTIFACTORY_URL" -DretryFailedDeploymentCount=3
+          mvn --batch-mode --no-transfer-progress -f "$POM" "${release_args[@]}" clean deploy -Dspotless.apply.skip=true "-DaltDeploymentRepository=ubique-artifactory-virtual::$ARTIFACTORY_URL" -DretryFailedDeploymentCount=3
 
       - name: Store completed Central bundle in Artifactory
         if: ${{ github.ref_type == 'tag' && steps.maven.outputs.central_bundle == 'true' }}
