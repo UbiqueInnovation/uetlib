@@ -2,6 +2,8 @@
 
 ## 1.0.0
 
+- Skip automatic Spotless formatting in CI builds and releases so formatting checks reject unformatted code.
+
 - Verify bundle ZIP/manifest/POM completion, retry transfers and retain the original bundle for recovery.
 
 - Rename uetlib configuration keys and property references to `ch.uetlib.*`, including Spring bindings, `@Value`,
