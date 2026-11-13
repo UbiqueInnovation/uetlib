@@ -91,7 +91,7 @@
                 "ch.ubique:uetlib-parent"
             ],
             "replacementNameTemplate": "{{{replace '^ch[.]ubique:' 'ch.uetlib:' packageName}}}",
-            "replacementVersion": "2026.11.1",
+            "replacementVersion": "2026.11.2",
             "automerge": false
         },
         {
@@ -212,7 +212,7 @@
                 "ch.ubique:uetlib-spring-boot-starter-parent"
             ],
             "replacementNameTemplate": "{{{replace '^ch[.]ubique:' 'ch.uetlib:' packageName}}}",
-            "replacementVersion": "4.1.2-2026.11.3",
+            "replacementVersion": "4.1.2-2026.11.6",
             "automerge": false
         },
         {
@@ -227,7 +227,7 @@
                 "ch.ubique:uetlib-self-bom"
             ],
             "replacementNameTemplate": "{{{replace '^ch[.]ubique:' 'ch.uetlib:' packageName}}}",
-            "replacementVersion": "6.0.2",
+            "replacementVersion": "6.0.6",
             "automerge": false
         },
         {
@@ -242,7 +242,7 @@
                 "ch.ubique:uetlib-job"
             ],
             "replacementNameTemplate": "{{{replace '^ch[.]ubique:' 'ch.uetlib:' packageName}}}",
-            "replacementVersion": "6.0.2",
+            "replacementVersion": "6.0.5",
             "automerge": false
         },
         {
@@ -271,7 +271,7 @@
                 "ch.ubique:inotify"
             ],
             "replacementName": "ch.uetlib:uetlib-inotify-java",
-            "replacementVersion": "3.0.2",
+            "replacementVersion": "3.0.3",
             "automerge": false
         },
         {
