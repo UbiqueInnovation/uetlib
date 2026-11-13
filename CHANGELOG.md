@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## Unreleased
+
+- Add **Publish Central release** (proof of concept): a library can request Central promotion of one staged stable
+  version. It uses the same assembly checks and `maven-central` approval as the batch.
+
 ## 1.0.0
 
 - Skip automatic Spotless formatting in CI builds and releases so formatting checks reject unformatted code.

@@ -94,6 +94,26 @@ Already-published files are compared byte-for-byte, including signatures. A rebu
 not interchangeable with the original published one. Remove such entries from the selection rather than attempting to
 overwrite them.
 
+## Request a single release (proof of concept)
+
+**Publish Central release** promotes one repository version through the same assembly, checks and `maven-central`
+approval as the batch. Only repositories listed in `central-release.json` are accepted; the requested version must be
+an exact stable version already staged in Artifactory. Its concurrency group is per release, so several requests can
+wait for approval at the same time.
+
+A library repository requests it after its tag build has staged the bundle. The Central token stays in the entry repo;
+the library holds only a GitHub App token that can start workflows in `uetlib`:
+
+1. Create a GitHub App owned by the organization with the repository permission **Actions: Read and write** and no
+   other permissions, webhooks disabled. Install it on `uetlib` only.
+2. Store its client ID as the organization variable `UETLIB_RELEASE_APP_CLIENT_ID` and a private key as the
+   organization secret `UETLIB_RELEASE_APP_PRIVATE_KEY`, both visible to the library repositories.
+3. Add the request job to the library's `publish.yml` (see `uetlib-bom`). Without the variable, the job skips itself.
+
+A leaked App key can only start the workflow; publication still waits for a `maven-central` reviewer, and the workflow
+checks the requested bundle exactly as for a batch. Manual runs are possible with the same inputs, and
+`publish=false` assembles without uploading.
+
 ## Recover a failed bundle upload
 
 A connection reset during `deploy-file` can leave the manifest and Maven POM uploaded while the ZIP is missing.
