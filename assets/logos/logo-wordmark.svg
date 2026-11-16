@@ -10,9 +10,6 @@
     </clipPath>
   </defs>
 
-  <!-- Clean Page Background -->
-  <rect width="800" height="720" fill="#F4F7FA" />
-
   <!-- App Icon Base (White with Shadow, No Haze) -->
   <rect x="220" y="90" width="360" height="360" rx="82" ry="82" fill="#FFFFFF" filter="url(#app-shadow)" />
 
