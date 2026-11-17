@@ -62,8 +62,9 @@ artifacts. Inotify builds Linux JNI in Maven and retains LGPL-3.0-or-later licen
 
 ## Central promotion
 
-Only **Publish Central batch** uses `UETLIB_MAVEN_CENTRAL_USERNAME` and `UETLIB_MAVEN_CENTRAL_PASSWORD`. Configure its
-`maven-central`
+Only **Publish Central batch** and **Publish Central release** use `UETLIB_MAVEN_CENTRAL_USERNAME` and
+`UETLIB_MAVEN_CENTRAL_PASSWORD`. The single-release workflow can be requested by a library after its tag build; see
+[CENTRAL_BATCH.md](CENTRAL_BATCH.md#request-a-single-release-proof-of-concept). Configure their `maven-central`
 environment with approval and default-branch restrictions. Start with its default assembly-only mode, inspect the batch
 artifact, then enable publication on a subsequent manual run. Publication waits for validation; Central completes
 asynchronously.

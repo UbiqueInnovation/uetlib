@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-"""Assemble immutable Artifactory bundles, then submit one Central deployment."""
+"""Assemble immutable Artifactory bundles, then submit one Central deployment.
+
+Select either the reviewed batch in central-release.json or a single requested release.
+"""
 import argparse
 import base64
 import hashlib
@@ -67,8 +70,14 @@ def read_bundle(data, manifest, repo, version):
     return files
 
 
-def assemble(selection, output, base, headers):
-    selected = json.loads(Path(selection).read_text())['repositories']
+def single(selection, repo, version):
+    """Select one requested release; only repositories listed in the batch selection may publish."""
+    if repo not in json.loads(Path(selection).read_text())['repositories']:
+        raise ValueError('Repository is not enabled for Central: ' + repo)
+    return {repo: version}
+
+
+def assemble(selected, selection_sha256, output, base, headers):
     combined = {}
     report = {'included': [], 'alreadyPublished': []}
     for repo, version in selected.items():
@@ -96,7 +105,7 @@ def assemble(selection, output, base, headers):
         for name, data in sorted(combined.items()):
             archive.writestr(name, data)
     report['sha256'] = digest((output / 'central-bundle.zip').read_bytes())
-    report['selectionSha256'] = digest(Path(selection).read_bytes())
+    report['selectionSha256'] = selection_sha256
     (output / 'batch.json').write_text(json.dumps(report, indent=2) + '\n')
     print(json.dumps(report, indent=2))
     return bool(combined)
@@ -147,13 +156,23 @@ def main():
     build = commands.add_parser('assemble')
     build.add_argument('--selection', default='central-release.json')
     build.add_argument('--output', default='central-batch')
+    build.add_argument('--repository', help='Assemble only this repository (requires --version)')
+    build.add_argument('--version', help='Exact stable version of --repository')
     upload = commands.add_parser('publish')
     upload.add_argument('--directory', default='central-batch')
     upload.add_argument('--name', required=True)
     args = parser.parse_args()
     if args.command == 'assemble':
         base = os.environ['UB_ARTIFACTORY_URL'] + os.environ['UB_ARTIFACTORY_REPO_UBIQUE']
-        assemble(args.selection, args.output, base, credentials('UB_ARTIFACTORY_USER', 'UB_ARTIFACTORY_PASSWORD'))
+        if bool(args.repository) != bool(args.version):
+            parser.error('--repository and --version must be used together')
+        if args.repository:
+            selected = single(args.selection, args.repository, args.version)
+            selection_sha256 = digest(json.dumps(selected, sort_keys=True).encode())
+        else:
+            selected = json.loads(Path(args.selection).read_text())['repositories']
+            selection_sha256 = digest(Path(args.selection).read_bytes())
+        assemble(selected, selection_sha256, args.output, base, credentials('UB_ARTIFACTORY_USER', 'UB_ARTIFACTORY_PASSWORD'))
     else:
         publish(args.directory, args.name)
 
