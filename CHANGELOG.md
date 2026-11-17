@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## Unreleased
+
+- Wait for the SonarCloud quality gate and fail the build when it fails. Skip analysis when no `SONAR_TOKEN` is
+  available, for example in fork pull requests. Callers map the uetlib-only `UETLIB_SONAR_TOKEN`.
+
 ## 1.0.0
 
 - Skip automatic Spotless formatting in CI builds and releases so formatting checks reject unformatted code.
