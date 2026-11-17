@@ -102,7 +102,9 @@ jobs:
         with:
           distribution: temurin
           java-version: ${{ inputs.java-version }}
-          cache: maven
+          # Pull request builds resolve without Artifactory. Maven rejects cached artifacts recorded from the
+          # Artifactory repository ("present, but unavailable"), so they must not reuse that cache.
+          cache: ${{ (github.event_name == 'pull_request' || github.event_name == 'pull_request_target') && '' || 'maven' }}
           cache-dependency-path: "**/pom.xml"
           overwrite-settings: false
           gpg-private-key: ${{ github.ref_type == 'tag' && github.event_name != 'pull_request' && github.event_name != 'pull_request_target' && secrets.SYSTEMS_UBIQUE_SIGNING_KEY_ARMOR_ASC || '' }}
