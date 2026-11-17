@@ -32,7 +32,7 @@ with an explicitly mapped Sonar token, extend the mapping:
 
 ```yaml
 secrets:
-  SONAR_TOKEN: ${{ secrets.UBIQUE_SONAR_TOKEN }}
+  SONAR_TOKEN: ${{ secrets.UETLIB_SONAR_TOKEN }}
   UB_ARTIFACTORY_USER: ${{ secrets.UB_ARTIFACTORY_USER }}
   UB_ARTIFACTORY_PASSWORD: ${{ secrets.UB_ARTIFACTORY_PASSWORD }}
   UB_ARTIFACTORY_URL: ${{ secrets.UB_ARTIFACTORY_URL }}

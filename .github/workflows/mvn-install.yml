@@ -260,4 +260,10 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           BRANCH_NAME: ${{ github.ref_name }}
         run: |
-          mvn --batch-mode --no-transfer-progress -f "$POM" org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
+          # Secrets are unavailable to fork pull requests; analysis must not fail those builds.
+          if [[ -z "$SONAR_TOKEN" ]]; then
+            echo "::notice::SONAR_TOKEN is not available; skipping SonarCloud analysis."
+            exit 0
+          fi
+          # Fail the build when the SonarCloud quality gate fails.
+          mvn --batch-mode --no-transfer-progress -f "$POM" org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.qualitygate.wait=true
