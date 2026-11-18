@@ -2,8 +2,8 @@
 
 ## 1.1.1
 
-- Do not restore the Maven cache in pull request builds. They resolve without Artifactory, and Maven rejected
-  cached artifacts recorded from Artifactory as "present, but unavailable".
+- Give pull request builds their own Maven cache (`maven-pr-*`). They resolve without Artifactory, and Maven
+  rejected artifacts from the shared cache recorded from Artifactory as "present, but unavailable".
 
 ## 1.1.0
 
