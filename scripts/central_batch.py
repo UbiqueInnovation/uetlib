@@ -12,6 +12,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+import xml.etree.ElementTree as ElementTree
 import zipfile
 
 GROUP = 'ch/uetlib/central-bundles'
@@ -67,6 +68,33 @@ def read_bundle(data, manifest, repo, version):
     return files
 
 
+def missing_references(combined):
+    """Return ch.uetlib POM references that are neither in this batch nor on Central."""
+    ns = {'m': 'http://maven.apache.org/POM/4.0.0'}
+    missing = []
+    for name, data in sorted(combined.items()):
+        if not name.endswith('.pom'):
+            continue
+        project = ElementTree.fromstring(data)
+        parent_version = project.findtext('m:parent/m:version', '', ns).strip()
+        properties = {element.tag.split('}')[-1]: (element.text or '').strip() for element in project.findall('m:properties/*', ns)}
+        properties['project.version'] = project.findtext('m:version', '', ns).strip() or parent_version
+        properties['project.parent.version'] = parent_version
+        references = project.findall('m:parent', ns) + project.findall('.//m:dependency', ns)
+        for reference in references:
+            group, artifact, version = (reference.findtext('m:' + tag, '', ns).strip() for tag in ('groupId', 'artifactId', 'version'))
+            if group != 'ch.uetlib' or not version:
+                continue
+            version = re.sub(r'\$\{([^}]+)\}', lambda match: properties.get(match[1], match[0]), version)
+            if '$' in version:
+                missing.append(f'{name} -> {artifact}:{version} (unresolved property)')
+                continue
+            pom = f'ch/uetlib/{artifact}/{version}/{artifact}-{version}.pom'
+            if pom not in combined and fetch(CENTRAL + '/' + pom, missing=True) is None:
+                missing.append(f'{name} -> {artifact}:{version}')
+    return missing
+
+
 def assemble(selection, output, base, headers):
     selected = json.loads(Path(selection).read_text())['repositories']
     combined = {}
@@ -90,6 +118,10 @@ def assemble(selection, output, base, headers):
                 raise ValueError('Conflicting bundle paths: ' + name)
             combined[name] = data
         report['included'].append({'repository': repo, 'version': version, 'commit': manifest['commit'], 'sha256': manifest['sha256']})
+    # Central is immutable: a release that references an unpublished uetlib version stays broken.
+    missing = missing_references(combined)
+    if missing:
+        raise ValueError('References to ch.uetlib versions neither in this batch nor on Central:\n  ' + '\n  '.join(missing))
     output = Path(output)
     output.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(output / 'central-bundle.zip', 'w', zipfile.ZIP_DEFLATED) as archive:
