@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 1.1.2
+
+- Central batch assembly fails when a selected POM references a `ch.uetlib` version that is neither in the
+  batch nor on Central.
+
 ## 1.1.1
 
 - Give pull request builds their own Maven cache (`maven-pr-*`). They resolve without Artifactory, and Maven
