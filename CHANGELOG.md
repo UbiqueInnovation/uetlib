@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 1.1.1
+
+- Give pull request builds their own Maven cache (`maven-pr-*`). They resolve without Artifactory, and Maven
+  rejected artifacts from the shared cache recorded from Artifactory as "present, but unavailable".
+
 ## 1.1.0
 
 - Wait for the SonarCloud quality gate and fail the build when it fails. Skip analysis when no `SONAR_TOKEN` is
