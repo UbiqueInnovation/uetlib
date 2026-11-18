@@ -76,11 +76,16 @@ def missing_references(combined):
         if not name.endswith('.pom'):
             continue
         project = ElementTree.fromstring(data)
+        parent_version = project.findtext('m:parent/m:version', '', ns).strip()
+        properties = {element.tag.split('}')[-1]: (element.text or '').strip() for element in project.findall('m:properties/*', ns)}
+        properties['project.version'] = project.findtext('m:version', '', ns).strip() or parent_version
+        properties['project.parent.version'] = parent_version
         references = project.findall('m:parent', ns) + project.findall('.//m:dependency', ns)
         for reference in references:
             group, artifact, version = (reference.findtext('m:' + tag, '', ns).strip() for tag in ('groupId', 'artifactId', 'version'))
             if group != 'ch.uetlib' or not version:
                 continue
+            version = re.sub(r'\$\{([^}]+)\}', lambda match: properties.get(match[1], match[0]), version)
             if '$' in version:
                 missing.append(f'{name} -> {artifact}:{version} (unresolved property)')
                 continue
