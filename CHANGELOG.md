@@ -1,7 +1,10 @@
 # CHANGELOG
 
-## 1.1.2
+## 1.2.0
 
+- Pull requests from the repository itself resolve through Artifactory again and share the Maven cache with
+  pushes, so they can build against releases that are not on Central yet. Fork pull requests, which receive no
+  secrets, still resolve from Central with the `maven-pr-*` cache; `pull_request_target` never uses Artifactory.
 - Central batch assembly fails when a selected POM references a `ch.uetlib` version that is neither in the
   batch nor on Central.
 
