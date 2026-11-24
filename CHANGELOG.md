@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## Unreleased
+
+- Align the public Renovate migration targets with the Spring Boot 4.2 release set.
+
 ## 1.2.0
 
 - Pull requests from the repository itself resolve through Artifactory again and share the Maven cache with

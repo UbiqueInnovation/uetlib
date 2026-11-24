@@ -31,7 +31,7 @@
                 "ch.ubique:uetlib-errorprone"
             ],
             "replacementNameTemplate": "{{{replace '^ch[.]ubique:' 'ch.uetlib:' packageName}}}",
-            "replacementVersion": "0.1.1",
+            "replacementVersion": "1.0.0",
             "automerge": false
         },
         {
@@ -46,7 +46,7 @@
                 "ch.ubique:uetlib-webp"
             ],
             "replacementNameTemplate": "{{{replace '^ch[.]ubique:' 'ch.uetlib:' packageName}}}",
-            "replacementVersion": "1.0.3",
+            "replacementVersion": "1.1.0",
             "automerge": false
         },
         {
@@ -76,7 +76,7 @@
                 "ch.ubique:uetlib-bom"
             ],
             "replacementNameTemplate": "{{{replace '^ch[.]ubique:' 'ch.uetlib:' packageName}}}",
-            "replacementVersion": "2026.11.4",
+            "replacementVersion": "2026.11.6",
             "automerge": false
         },
         {
@@ -91,7 +91,7 @@
                 "ch.ubique:uetlib-parent"
             ],
             "replacementNameTemplate": "{{{replace '^ch[.]ubique:' 'ch.uetlib:' packageName}}}",
-            "replacementVersion": "2026.11.2",
+            "replacementVersion": "2026.11.5",
             "automerge": false
         },
         {
@@ -123,7 +123,7 @@
                 "ch.ubique:uetlib-testcontainers-redis"
             ],
             "replacementNameTemplate": "{{{replace '^ch[.]ubique:' 'ch.uetlib:' packageName}}}",
-            "replacementVersion": "3.0.1",
+            "replacementVersion": "3.1.0",
             "automerge": false
         },
         {
@@ -143,7 +143,7 @@
                 "ch.ubique:uetlib-storage"
             ],
             "replacementNameTemplate": "{{{replace '^ch[.]ubique:' 'ch.uetlib:' packageName}}}",
-            "replacementVersion": "3.0.2",
+            "replacementVersion": "3.1.0",
             "automerge": false
         },
         {
@@ -155,11 +155,25 @@
                 "maven"
             ],
             "matchPackageNames": [
-                "ch.ubique:uetlib-monitoring",
+                "ch.ubique:uetlib-monitoring"
+            ],
+            "replacementNameTemplate": "{{{replace '^ch[.]ubique:' 'ch.uetlib:' packageName}}}",
+            "replacementVersion": "3.2.0",
+            "automerge": false
+        },
+        {
+            "description": "Target the current public migration release",
+            "matchManagers": [
+                "maven"
+            ],
+            "matchDatasources": [
+                "maven"
+            ],
+            "matchPackageNames": [
                 "ch.ubique:uetlib-storage-spring-boot"
             ],
             "replacementNameTemplate": "{{{replace '^ch[.]ubique:' 'ch.uetlib:' packageName}}}",
-            "replacementVersion": "3.0.2",
+            "replacementVersion": "3.1.0",
             "automerge": false
         },
         {
@@ -179,7 +193,7 @@
                 "ch.ubique:uetlib-geo-spring-boot"
             ],
             "replacementNameTemplate": "{{{replace '^ch[.]ubique:' 'ch.uetlib:' packageName}}}",
-            "replacementVersion": "4.0.3",
+            "replacementVersion": "4.1.0",
             "automerge": false
         },
         {
@@ -197,7 +211,7 @@
                 "ch.ubique:uetlib-spring-boot-security"
             ],
             "replacementNameTemplate": "{{{replace '^ch[.]ubique:' 'ch.uetlib:' packageName}}}",
-            "replacementVersion": "4.0.2",
+            "replacementVersion": "4.1.0",
             "automerge": false
         },
         {
@@ -212,7 +226,7 @@
                 "ch.ubique:uetlib-spring-boot-starter-parent"
             ],
             "replacementNameTemplate": "{{{replace '^ch[.]ubique:' 'ch.uetlib:' packageName}}}",
-            "replacementVersion": "4.1.2-2026.11.6",
+            "replacementVersion": "4.2.0-2026.11.8",
             "automerge": false
         },
         {
@@ -227,7 +241,7 @@
                 "ch.ubique:uetlib-self-bom"
             ],
             "replacementNameTemplate": "{{{replace '^ch[.]ubique:' 'ch.uetlib:' packageName}}}",
-            "replacementVersion": "6.0.6",
+            "replacementVersion": "6.1.0",
             "automerge": false
         },
         {
@@ -242,7 +256,7 @@
                 "ch.ubique:uetlib-job"
             ],
             "replacementNameTemplate": "{{{replace '^ch[.]ubique:' 'ch.uetlib:' packageName}}}",
-            "replacementVersion": "6.0.5",
+            "replacementVersion": "6.1.0",
             "automerge": false
         },
         {
@@ -271,7 +285,7 @@
                 "ch.ubique:inotify"
             ],
             "replacementName": "ch.uetlib:uetlib-inotify-java",
-            "replacementVersion": "3.0.3",
+            "replacementVersion": "3.1.0",
             "automerge": false
         },
         {
@@ -286,7 +300,7 @@
                 "ch.ubique:uetlib-spring-boot-geo"
             ],
             "replacementName": "ch.uetlib:uetlib-geo-spring-boot",
-            "replacementVersion": "4.0.3",
+            "replacementVersion": "4.1.0",
             "automerge": false
         },
         {
@@ -319,7 +333,7 @@
                 "ch.ubique.uetlib:uetlib-spring-boot-coverage"
             ],
             "replacementNameTemplate": "{{{replace '^ch[.]ubique[.]uetlib:' 'ch.uetlib:' packageName}}}",
-            "replacementVersion": "4.0.2",
+            "replacementVersion": "4.1.0",
             "automerge": false
         },
         {
@@ -334,7 +348,7 @@
                 "ch.ubique.uetlib:uetlib-storage-spring-boot"
             ],
             "replacementName": "ch.uetlib:uetlib-storage-spring-boot",
-            "replacementVersion": "3.0.2",
+            "replacementVersion": "3.1.0",
             "automerge": false
         }
     ]
