@@ -1,7 +1,8 @@
 # CHANGELOG
 
-## Unreleased
+## 1.2.1
 
+- Report quality gate failures through the SonarCloud check separately from the Maven build.
 - Align the public Renovate migration targets with the Spring Boot 4.2 release set.
 
 ## 1.2.0

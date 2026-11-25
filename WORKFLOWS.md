@@ -34,9 +34,11 @@ an
 environment on the entry repo does not provide secrets to other repositories.
 
 Optional `sonar: true` runs analysis in the same job after tests. Map `SONAR_TOKEN` from the caller's
-`UETLIB_SONAR_TOKEN`. The build waits for the SonarCloud quality gate and fails when it fails; without a token
-(for example in fork pull requests) analysis is skipped. If you use an explicit secrets mapping for Sonar, also map the Artifactory and signing secrets as
-shown in [CENTRAL_BATCH.md](CENTRAL_BATCH.md#caller-rollout).
+`UETLIB_SONAR_TOKEN`. The scanner submits the report and SonarCloud reports the quality gate in its own
+pull request check. Require `SonarCloud Code Analysis` in branch protection wherever that check is
+available and a passing gate is needed for merges. Without a token (for example in fork pull requests),
+analysis is skipped. If you use an explicit secrets mapping for Sonar, also map the Artifactory and
+signing secrets as shown in [CENTRAL_BATCH.md](CENTRAL_BATCH.md#caller-rollout).
 
 ## Tagged versions
 
