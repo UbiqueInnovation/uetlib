@@ -11,7 +11,8 @@
                 "maven"
             ],
             "matchPackageNames": [
-                "/^ch\\.ubique:uetlib.*$/"
+                "/^ch\\.ubique:uetlib.*$/",
+                "!/^ch\\.ubique:uetlib-rust-/"
             ],
             "replacementNameTemplate": "{{{replace '^ch[.]ubique:' 'ch.uetlib:' packageName}}}",
             "automerge": false,
@@ -268,7 +269,8 @@
                 "maven"
             ],
             "matchPackageNames": [
-                "/^ch\\.ubique\\.uetlib:uetlib.*$/"
+                "/^ch\\.ubique\\.uetlib:uetlib.*$/",
+                "!/^ch\\.ubique\\.uetlib:uetlib-rust-/"
             ],
             "replacementNameTemplate": "{{{replace '^ch[.]ubique[.]uetlib:' 'ch.uetlib:' packageName}}}",
             "automerge": false
